@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Code, TrendingUp, Cpu, Newspaper, Megaphone, ShieldAlert, Sparkles } from 'lucide-react';
+import { LayoutDashboard, Code, TrendingUp, Cpu, Newspaper, Megaphone, ShieldAlert, Sparkles, Lock } from 'lucide-react';
 import Landing from './pages/Landing';
 import Dashboard from './pages/Dashboard';
 import Onboarding from './pages/Onboarding';
@@ -11,7 +11,7 @@ import PublishingGuide from './pages/PublishingGuide';
 import AdManager from './pages/AdManager';
 import Newsletter from './pages/Newsletter';
 
-function Sidebar() {
+function Sidebar({ hasPremium }) {
   const location = useLocation();
   const isActive = (path) => location.pathname === path;
 
@@ -26,41 +26,56 @@ function Sidebar() {
       </div>
       
       <nav className="sidebar-nav">
+        {/* Free Tier Accessible */}
         <Link to="/dashboard" className={`nav-item ${isActive('/dashboard') ? 'active' : ''}`}>
-          <LayoutDashboard size={20} /> Dashboard
-        </Link>
-        <Link to="/integrations" className={`nav-item ${isActive('/integrations') ? 'active' : ''}`}>
-          <TrendingUp size={20} /> Integrations & Sales
-        </Link>
-        <Link to="/ai-analyzer" className={`nav-item ${isActive('/ai-analyzer') ? 'active' : ''}`}>
-          <Cpu size={20} /> AI Business Analyzer
+          <LayoutDashboard size={20} /> Overall Income
         </Link>
         <Link to="/publishing" className={`nav-item ${isActive('/publishing') ? 'active' : ''}`}>
-          <ShieldAlert size={20} /> Publishing & Legal
-        </Link>
-        <Link to="/ads" className={`nav-item ${isActive('/ads') ? 'active' : ''}`}>
-          <Megaphone size={20} /> Ad Manager
+          <ShieldAlert size={20} /> Legal & Publishing
         </Link>
         <Link to="/newsletter" className={`nav-item ${isActive('/newsletter') ? 'active' : ''}`}>
           <Newspaper size={20} /> News & Newsletter
         </Link>
+
+        <div style={{ height: '1px', background: 'var(--panel-border)', margin: '8px 0' }} />
+
+        {/* Premium Features */}
+        <Link to="/integrations" className={`nav-item ${isActive('/integrations') ? 'active' : ''}`} style={{ opacity: hasPremium ? 1 : 0.6 }}>
+          <TrendingUp size={20} /> Integrations {!hasPremium && <Lock size={14} style={{ marginLeft: 'auto' }} />}
+        </Link>
+        <Link to="/ai-analyzer" className={`nav-item ${isActive('/ai-analyzer') ? 'active' : ''}`} style={{ opacity: hasPremium ? 1 : 0.6 }}>
+          <Cpu size={20} /> AI Business Analyzer {!hasPremium && <Lock size={14} style={{ marginLeft: 'auto' }} />}
+        </Link>
+        <Link to="/ads" className={`nav-item ${isActive('/ads') ? 'active' : ''}`} style={{ opacity: hasPremium ? 1 : 0.6 }}>
+          <Megaphone size={20} /> Ad Manager {!hasPremium && <Lock size={14} style={{ marginLeft: 'auto' }} />}
+        </Link>
       </nav>
 
       <div style={{ marginTop: 'auto' }}>
-        <div className="glass-panel" style={{ padding: '16px', textAlign: 'center', borderColor: 'var(--accent-1)' }}>
-          <Sparkles className="text-gradient" size={24} style={{ margin: '0 auto 8px' }} />
-          <h4 style={{ marginBottom: '4px' }}>Premium Active</h4>
-          <p className="input-label" style={{ fontSize: '0.8rem' }}>All pro features unlocked</p>
-        </div>
+        {hasPremium ? (
+          <div className="glass-panel" style={{ padding: '16px', textAlign: 'center', borderColor: 'var(--accent-1)' }}>
+            <Sparkles className="text-gradient" size={24} style={{ margin: '0 auto 8px' }} />
+            <h4 style={{ marginBottom: '4px' }}>Premium Active</h4>
+            <p className="input-label" style={{ fontSize: '0.8rem' }}>All pro features unlocked</p>
+          </div>
+        ) : (
+          <Link to="/premium" style={{ textDecoration: 'none' }}>
+            <div className="glass-panel" style={{ padding: '16px', textAlign: 'center', cursor: 'pointer', transition: 'var(--transition)' }}>
+              <Sparkles className="text-gradient" size={24} style={{ margin: '0 auto 8px' }} />
+              <h4 style={{ marginBottom: '4px' }}>Upgrade to Premium</h4>
+              <p className="input-label" style={{ fontSize: '0.8rem' }}>Unlock AI & Integrations</p>
+            </div>
+          </Link>
+        )}
       </div>
     </div>
   );
 }
 
-function MainLayout({ children }) {
+function MainLayout({ children, hasPremium }) {
   return (
     <div className="app-container animate-fade-in">
-      <Sidebar />
+      <Sidebar hasPremium={hasPremium} />
       <div className="main-content">
         {children}
       </div>
@@ -72,12 +87,17 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [hasPremium, setHasPremium] = useState(false);
 
-  // Auth guard wrapper
-  const ProtectedRoute = ({ children }) => {
-    if (!isAuthenticated || !hasPremium) {
-      return <Navigate to="/onboarding" />;
-    }
-    return <MainLayout>{children}</MainLayout>;
+  // General Auth Guard (Free or Premium)
+  const AuthRoute = ({ children }) => {
+    if (!isAuthenticated) return <Navigate to="/onboarding" />;
+    return <MainLayout hasPremium={hasPremium}>{children}</MainLayout>;
+  };
+
+  // Premium Only Guard
+  const PremiumRoute = ({ children }) => {
+    if (!isAuthenticated) return <Navigate to="/onboarding" />;
+    if (!hasPremium) return <Navigate to="/premium" />;
+    return <MainLayout hasPremium={hasPremium}>{children}</MainLayout>;
   };
 
   return (
@@ -94,18 +114,23 @@ function App() {
           path="/premium" 
           element={
             isAuthenticated ? 
-            <PremiumPaywall onSubscribe={() => setHasPremium(true)} /> : 
+            <PremiumPaywall 
+              onSubscribe={() => setHasPremium(true)} 
+              onSkip={() => setHasPremium(false)}
+            /> : 
             <Navigate to="/onboarding" />
           } 
         />
 
-        {/* Protected Dashboard Routes */}
-        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-        <Route path="/integrations" element={<ProtectedRoute><Integrations /></ProtectedRoute>} />
-        <Route path="/ai-analyzer" element={<ProtectedRoute><AIAnalyzer /></ProtectedRoute>} />
-        <Route path="/publishing" element={<ProtectedRoute><PublishingGuide /></ProtectedRoute>} />
-        <Route path="/ads" element={<ProtectedRoute><AdManager /></ProtectedRoute>} />
-        <Route path="/newsletter" element={<ProtectedRoute><Newsletter /></ProtectedRoute>} />
+        {/* Free Tier Accessible Routes */}
+        <Route path="/dashboard" element={<AuthRoute><Dashboard /></AuthRoute>} />
+        <Route path="/publishing" element={<AuthRoute><PublishingGuide /></AuthRoute>} />
+        <Route path="/newsletter" element={<AuthRoute><Newsletter /></AuthRoute>} />
+        
+        {/* Premium Only Routes */}
+        <Route path="/integrations" element={<PremiumRoute><Integrations /></PremiumRoute>} />
+        <Route path="/ai-analyzer" element={<PremiumRoute><AIAnalyzer /></PremiumRoute>} />
+        <Route path="/ads" element={<PremiumRoute><AdManager /></PremiumRoute>} />
         
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" />} />
