@@ -1,5 +1,5 @@
 import React from 'react';
-import { Megaphone, Target, BarChart2, Hash, Maximize, PlayCircle, Youtube } from 'lucide-react';
+import { Megaphone, Target, BarChart2, Hash, Maximize, PlayCircle } from 'lucide-react';
 
 export default function AdManager() {
   return (
@@ -46,7 +46,7 @@ export default function AdManager() {
         <div className="glass-panel flex-between" style={{ padding: '16px 24px' }}>
           <div className="flex-center gap-4">
             <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#FF0000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Youtube color="#fff" />
+              <span style={{ color: '#fff', fontWeight: 'bold' }}>YT</span>
             </div>
             <div>
               <h4>YouTube Ads</h4>
