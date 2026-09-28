@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Code, TrendingUp, Cpu, Newspaper, Megaphone, ShieldAlert, Sparkles, Lock } from 'lucide-react';
+import { LayoutDashboard, Code, TrendingUp, Cpu, Newspaper, Megaphone, ShieldAlert, Sparkles, Lock, ShieldCheck } from 'lucide-react';
 import Landing from './pages/Landing';
 import Dashboard from './pages/Dashboard';
 import Onboarding from './pages/Onboarding';
@@ -10,6 +10,7 @@ import AIAnalyzer from './pages/AIAnalyzer';
 import PublishingGuide from './pages/PublishingGuide';
 import AdManager from './pages/AdManager';
 import Newsletter from './pages/Newsletter';
+import Orchestrator from './pages/Orchestrator';
 
 function Sidebar({ hasPremium }) {
   const location = useLocation();
@@ -48,6 +49,9 @@ function Sidebar({ hasPremium }) {
         </Link>
         <Link to="/ads" className={`nav-item ${isActive('/ads') ? 'active' : ''}`} style={{ opacity: hasPremium ? 1 : 0.6 }}>
           <Megaphone size={20} /> Ad Manager {!hasPremium && <Lock size={14} style={{ marginLeft: 'auto' }} />}
+        </Link>
+        <Link to="/orchestrator" className={`nav-item ${isActive('/orchestrator') ? 'active' : ''}`} style={{ opacity: hasPremium ? 1 : 0.6 }}>
+          <ShieldCheck size={20} /> Anti-Fragile Engine {!hasPremium && <Lock size={14} style={{ marginLeft: 'auto' }} />}
         </Link>
       </nav>
 
@@ -131,6 +135,7 @@ function App() {
         <Route path="/integrations" element={<PremiumRoute><Integrations /></PremiumRoute>} />
         <Route path="/ai-analyzer" element={<PremiumRoute><AIAnalyzer /></PremiumRoute>} />
         <Route path="/ads" element={<PremiumRoute><AdManager /></PremiumRoute>} />
+        <Route path="/orchestrator" element={<PremiumRoute><Orchestrator /></PremiumRoute>} />
         
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" />} />
