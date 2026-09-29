@@ -6,8 +6,8 @@
   --text-primary: #111111;
   --text-secondary: #555566;
   
-  --accent-1: #ff2e93;
-  --accent-2: #00b0d0;
+  --accent-1: #2B75E8; /* Modern Clay Blue */
+  --accent-2: #8CB9F0; /* Soft Light Blue / Whiteish Blue */
   --accent-gradient: linear-gradient(135deg, var(--accent-1), var(--accent-2));
   
   --font-main: 'Outfit', sans-serif;

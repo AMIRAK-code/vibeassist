@@ -37,7 +37,7 @@ export default function Dashboard() {
             <DollarSign className="text-gradient" size={20} />
           </div>
           <h2 className="mt-4" style={{ fontSize: '2rem' }}>$19,550</h2>
-          <p style={{ color: '#00b0d0', fontSize: '0.8rem', marginTop: '8px', fontWeight: 'bold' }}>+12.5% from last week</p>
+          <p style={{ color: '#2B75E8', fontSize: '0.8rem', marginTop: '8px', fontWeight: 'bold' }}>+12.5% from last week</p>
         </div>
 
         <div className="glass-panel">
@@ -46,7 +46,7 @@ export default function Dashboard() {
             <Download className="text-gradient" size={20} />
           </div>
           <h2 className="mt-4" style={{ fontSize: '2rem' }}>30,288</h2>
-          <p style={{ color: '#00b0d0', fontSize: '0.8rem', marginTop: '8px', fontWeight: 'bold' }}>+5.2% from last week</p>
+          <p style={{ color: '#2B75E8', fontSize: '0.8rem', marginTop: '8px', fontWeight: 'bold' }}>+5.2% from last week</p>
         </div>
 
         <div className="glass-panel">
@@ -55,7 +55,7 @@ export default function Dashboard() {
             <TrendingUp className="text-gradient" size={20} />
           </div>
           <h2 className="mt-4" style={{ fontSize: '2rem' }}>4.8%</h2>
-          <p style={{ color: '#ff2e93', fontSize: '0.8rem', marginTop: '8px', fontWeight: 'bold' }}>-0.4% from last week</p>
+          <p style={{ color: '#FF3B30', fontSize: '0.8rem', marginTop: '8px', fontWeight: 'bold' }}>-0.4% from last week</p>
         </div>
 
         <div className="glass-panel">
@@ -64,7 +64,7 @@ export default function Dashboard() {
             <Users className="text-gradient" size={20} />
           </div>
           <h2 className="mt-4" style={{ fontSize: '2rem' }}>12,400</h2>
-          <p style={{ color: '#00b0d0', fontSize: '0.8rem', marginTop: '8px', fontWeight: 'bold' }}>+18.1% from last week</p>
+          <p style={{ color: '#2B75E8', fontSize: '0.8rem', marginTop: '8px', fontWeight: 'bold' }}>+18.1% from last week</p>
         </div>
       </div>
 
@@ -74,12 +74,12 @@ export default function Dashboard() {
           <ComposedChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 20 }}>
             <defs>
               <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#3DDC84" stopOpacity={0.4}/>
-                <stop offset="95%" stopColor="#3DDC84" stopOpacity={0}/>
+                <stop offset="5%" stopColor="#2B75E8" stopOpacity={0.4}/>
+                <stop offset="95%" stopColor="#2B75E8" stopOpacity={0}/>
               </linearGradient>
               <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#ff2e93" stopOpacity={0.4}/>
-                <stop offset="95%" stopColor="#ff2e93" stopOpacity={0}/>
+                <stop offset="5%" stopColor="#8CB9F0" stopOpacity={0.4}/>
+                <stop offset="95%" stopColor="#8CB9F0" stopOpacity={0}/>
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" />
@@ -92,10 +92,10 @@ export default function Dashboard() {
             <Legend verticalAlign="top" height={36}/>
             
             {/* The multi-layered chart */}
-            <Area type="monotone" dataKey="revenue" name="Gross Revenue" fill="url(#colorRevenue)" stroke="#ff2e93" strokeWidth={2} />
-            <Area type="monotone" dataKey="profit" name="Net Profit" fill="url(#colorProfit)" stroke="#3DDC84" strokeWidth={3} />
+            <Area type="monotone" dataKey="revenue" name="Gross Revenue" fill="url(#colorRevenue)" stroke="#8CB9F0" strokeWidth={2} />
+            <Area type="monotone" dataKey="profit" name="Net Profit" fill="url(#colorProfit)" stroke="#2B75E8" strokeWidth={3} />
             
-            <Bar dataKey="paidDownloads" name="Paid Acquisition" barSize={12} fill="#00b0d0" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="paidDownloads" name="Paid Acquisition" barSize={12} fill="#2B75E8" radius={[4, 4, 0, 0]} />
             <Bar dataKey="organicDownloads" name="Organic Installs" barSize={12} fill="#FCC624" radius={[4, 4, 0, 0]} />
             
             <Line type="monotone" dataKey="adSpend" name="Ad Spend" stroke="#000" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 4 }} />
