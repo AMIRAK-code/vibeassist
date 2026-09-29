@@ -112,3 +112,4 @@ export default function PremiumPaywall({ onSubscribe, onSkip }) {
     </div>
   );
 }
+

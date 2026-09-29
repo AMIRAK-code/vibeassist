@@ -43,7 +43,7 @@ export default function Orchestrator() {
                 {mod.icon}
               </div>
               <div>
-                <h4 style={{ color: activeModule === mod.id ? 'white' : 'var(--text-secondary)' }}>{mod.title}</h4>
+                <h4 style={{ color: activeModule === mod.id ? 'var(--accent-2)' : 'var(--text-secondary)' }}>{mod.title}</h4>
                 <p className="input-label" style={{ fontSize: '0.8rem', marginTop: '4px' }}>{mod.desc}</p>
               </div>
             </div>
@@ -57,7 +57,7 @@ export default function Orchestrator() {
             <p className="input-label mt-2">Architecture scaffolding and schema generation active.</p>
           </div>
           
-          <div style={{ flex: 1, overflowY: 'auto', padding: '16px 0', fontFamily: 'monospace', fontSize: '0.85rem', color: '#00f0ff' }}>
+          <div style={{ flex: 1, overflowY: 'auto', padding: '16px 0', fontFamily: 'monospace', fontSize: '0.85rem', color: 'var(--accent-2)' }}>
             {activeModule === 1 && (
               <div className="animate-fade-in">
                 <p>{'>'} SPWNING: BuilderAgent (Primary)</p>
@@ -92,3 +92,4 @@ export default function Orchestrator() {
     </div>
   );
 }
+

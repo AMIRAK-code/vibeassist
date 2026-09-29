@@ -16,7 +16,7 @@ export default function AdManager() {
             <Target className="text-gradient" size={20} />
           </div>
           <h2 className="mt-4" style={{ fontSize: '1.8rem' }}>$4,250.00</h2>
-          <p style={{ color: '#00d2ff', fontSize: '0.8rem', marginTop: '8px' }}>This month</p>
+          <p style={{ color: 'var(--accent-2)', fontSize: '0.8rem', marginTop: '8px' }}>This month</p>
         </div>
 
         <div className="glass-panel">
@@ -25,7 +25,7 @@ export default function AdManager() {
             <BarChart2 className="text-gradient" size={20} />
           </div>
           <h2 className="mt-4" style={{ fontSize: '1.8rem' }}>285%</h2>
-          <p style={{ color: '#3DDC84', fontSize: '0.8rem', marginTop: '8px' }}>Healthy</p>
+          <p style={{ color: 'var(--success)', fontSize: '0.8rem', marginTop: '8px' }}>Healthy</p>
         </div>
 
         <div className="glass-panel">
@@ -34,7 +34,7 @@ export default function AdManager() {
             <Maximize className="text-gradient" size={20} />
           </div>
           <h2 className="mt-4" style={{ fontSize: '1.8rem' }}>$1.85</h2>
-          <p style={{ color: '#ff2e93', fontSize: '0.8rem', marginTop: '8px' }}>Target: $1.50</p>
+          <p style={{ color: 'var(--accent-1)', fontSize: '0.8rem', marginTop: '8px' }}>Target: $1.50</p>
         </div>
       </div>
 
@@ -60,7 +60,7 @@ export default function AdManager() {
         <div className="glass-panel flex-between" style={{ padding: '16px 24px' }}>
           <div className="flex-center gap-4">
             <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#000', border: '1px solid #00f0ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <PlayCircle color="#00f0ff" />
+              <PlayCircle color="var(--accent-2)" />
             </div>
             <div>
               <h4>TikTok For Business</h4>
@@ -102,3 +102,4 @@ export default function AdManager() {
     </div>
   );
 }
+

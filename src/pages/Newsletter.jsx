@@ -6,7 +6,7 @@ export default function Newsletter() {
     {
       title: 'X.com (Twitter) Vibe Coding Thread',
       platform: 'X.com',
-      icon: <Hash size={20} color="#fff" />,
+      icon: <Hash size={20} color="var(--text-primary)" />,
       desc: 'The ultimate mega-thread on setting up your dev environment for 10x output using AI agents.',
       url: '#'
     },
@@ -54,7 +54,7 @@ export default function Newsletter() {
             <h3 style={{ color: 'white' }}>Subscribe to the Weekly Vibe</h3>
             <p style={{ color: 'rgba(255,255,255,0.9)', marginTop: '8px', fontSize: '0.9rem' }}>Get the best growth hacks and API changes straight to your inbox.</p>
             <div className="input-group" style={{ flexDirection: 'row', marginTop: '16px' }}>
-              <input type="email" className="input-field" placeholder="your@email.com" style={{ flex: 1, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.2)' }} />
+              <input type="email" className="input-field" placeholder="your@email.com" style={{ flex: 1, background: 'var(--surface)', border: '1px solid rgba(255,255,255,0.2)' }} />
               <button className="btn" style={{ background: 'white', color: '#000' }}>Subscribe</button>
             </div>
           </div>
@@ -82,3 +82,4 @@ export default function Newsletter() {
     </div>
   );
 }
+

@@ -46,7 +46,7 @@ export default function Landing() {
 
         {/* Demo App Visual (Mockup) */}
         <div className="glass-panel mt-4" style={{ marginTop: '64px', width: '100%', maxWidth: '1000px', padding: '8px', border: '1px solid var(--accent-2)', boxShadow: '0 20px 60px rgba(0, 240, 255, 0.15)' }}>
-          <div style={{ background: '#0a0a0f', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--panel-border)' }}>
+          <div style={{ background: '#0a0a0f', color: '#fff', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--panel-border)' }}>
             
             {/* Fake Dashboard Header */}
             <div style={{ height: '40px', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', padding: '0 16px', gap: '8px', borderBottom: '1px solid var(--panel-border)' }}>
@@ -94,3 +94,4 @@ export default function Landing() {
     </div>
   );
 }
+
