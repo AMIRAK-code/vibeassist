@@ -1,68 +1,113 @@
-import React from 'react';
-import { ShieldAlert, BookOpen, Apple, Monitor, Smartphone, TerminalSquare, ArrowRight } from 'lucide-react';
+import { useState } from "react";
+import { ExternalLink } from "lucide-react";
+import { PageHeader, Notice } from "../components/UI";
 
-export default function PublishingGuide() {
+const guides = [
+  {
+    id: "ios",
+    name: "iOS & App Store",
+    url: "https://developer.apple.com/app-store/review/guidelines/",
+    steps: [
+      "Review the App Store guidelines for your app category.",
+      "Prepare your privacy disclosures and required app information.",
+      "Check purchase flows and test the build before submission.",
+    ],
+  },
+  {
+    id: "android",
+    name: "Android & Google Play",
+    url: "https://support.google.com/googleplay/android-developer/answer/9859152",
+    steps: [
+      "Review the policies that apply to your app.",
+      "Check the testing requirements for your developer account.",
+      "Prepare your store listing and Data safety information.",
+    ],
+  },
+  {
+    id: "windows",
+    name: "Windows",
+    url: "https://learn.microsoft.com/en-us/windows/apps/publish/",
+    steps: [
+      "Choose your distribution and packaging approach.",
+      "Review signing and certification requirements.",
+      "Test installation, updates, and removal before publishing.",
+    ],
+  },
+  {
+    id: "web",
+    name: "Web / SaaS",
+    url: "https://web.dev/learn/",
+    steps: [
+      "Test core journeys on mobile and with a keyboard.",
+      "Review data collection and required privacy disclosures for your audience.",
+      "Test payment, recovery, and support flows before launch.",
+    ],
+  },
+];
+export default function PublishingGuide({ project }) {
+  const [platform, setPlatform] = useState(
+    () =>
+      ({
+        iOS: "ios",
+        Android: "android",
+        Desktop: "windows",
+        "Web / SaaS": "web",
+      })[project?.platform] || "all",
+  );
   return (
-    <div className="animate-fade-in">
-      <div className="mb-4">
-        <h2><span className="text-gradient">Publishing</span> & Legal Center</h2>
-        <p className="input-label mt-4">Master the rules of the tech world. Navigate app stores, legalities, and monetization compliance effortlessly.</p>
+    <div className="stack">
+      <PageHeader
+        title="Launch checklist"
+        description="Start with your platform, then review the guidance that applies to your project."
+      />
+      <Notice>
+        These are planning prompts, not a compliance certification. Requirements
+        vary by app, account, and location. Follow the linked official
+        documentation for current details.
+      </Notice>
+      <div className="input-group platform-select">
+        <label htmlFor="launch-platform">Platform</label>
+        <select
+          id="launch-platform"
+          className="input-field"
+          value={platform}
+          onChange={(event) => setPlatform(event.target.value)}
+        >
+          <option value="all">All platforms</option>
+          {guides.map((guide) => (
+            <option value={guide.id} key={guide.id}>
+              {guide.name}
+            </option>
+          ))}
+        </select>
       </div>
-
-      <div className="grid-2 mt-4">
-        
-        {/* Apple iOS */}
-        <div className="glass-panel">
-          <div className="flex-center gap-4" style={{ justifyContent: 'flex-start' }}>
-            <Apple size={32} />
-            <h3>iOS & App Store</h3>
-          </div>
-          <p className="input-label mt-4">Guidelines for App Store Review, privacy manifests, ATT (App Tracking Transparency), and in-app purchase rules (30% cut).</p>
-          <button className="btn btn-secondary w-full mt-4">Read iOS Guide <ArrowRight size={16} /></button>
-        </div>
-
-        {/* Android */}
-        <div className="glass-panel">
-          <div className="flex-center gap-4" style={{ justifyContent: 'flex-start' }}>
-            <Smartphone size={32} color="var(--success)" />
-            <h3>Android & Play Store</h3>
-          </div>
-          <p className="input-label mt-4">Google Play Policies, 20-tester requirement for new devs, billing library implementation, and data safety forms.</p>
-          <button className="btn btn-secondary w-full mt-4">Read Android Guide <ArrowRight size={16} /></button>
-        </div>
-
-        {/* Windows */}
-        <div className="glass-panel">
-          <div className="flex-center gap-4" style={{ justifyContent: 'flex-start' }}>
-            <Monitor size={32} color="#00a4ef" />
-            <h3>Windows (MS Store)</h3>
-          </div>
-          <p className="input-label mt-4">MSIX packaging, code signing certificates (EV/Standard), Windows Defender SmartScreen filtering.</p>
-          <button className="btn btn-secondary w-full mt-4">Read Windows Guide <ArrowRight size={16} /></button>
-        </div>
-
-        {/* Linux / Web */}
-        <div className="glass-panel">
-          <div className="flex-center gap-4" style={{ justifyContent: 'flex-start' }}>
-            <TerminalSquare size={32} color="#FCC624" />
-            <h3>Linux & Web (SaaS)</h3>
-          </div>
-          <p className="input-label mt-4">GDPR & CCPA compliance, cookie banners, Stripe Tax / VAT collection, and open-source licensing (MIT/GPL).</p>
-          <button className="btn btn-secondary w-full mt-4">Read Web/Linux Guide <ArrowRight size={16} /></button>
-        </div>
-
+      <div className="grid-2">
+        {guides
+          .filter((guide) => platform === "all" || guide.id === platform)
+          .map((guide) => (
+            <section className="glass-panel resource-card" key={guide.id}>
+              <h2>{guide.name}</h2>
+              <ol className="launch-steps">
+                {guide.steps.map((step) => (
+                  <li key={step}>{step}</li>
+                ))}
+              </ol>
+              <a href={guide.url} target="_blank" rel="noreferrer">
+                Read official guidance{" "}
+                <ExternalLink size={16} aria-hidden="true" />
+                <span className="sr-only"> (opens in a new tab)</span>
+              </a>
+            </section>
+          ))}
       </div>
-
-      <div className="glass-panel mt-4" style={{ background: 'rgba(255, 46, 147, 0.05)', borderColor: 'rgba(255, 46, 147, 0.2)' }}>
-        <div className="flex-center gap-4" style={{ justifyContent: 'flex-start' }}>
-          <ShieldAlert className="text-gradient" size={24} />
-          <h3>Legal Document Generator</h3>
-        </div>
-        <p className="input-label mt-4">Automatically generate Privacy Policies, Terms of Service, and EULAs tailored to your exact tech stack and monetization model.</p>
-        <button className="btn btn-primary mt-4">Generate Documents</button>
-      </div>
-
+      <section className="glass-panel">
+        <h2>Legal documents</h2>
+        <p className="muted mt-4">
+          Document generation is not available in this preview. Prepare your
+          data practices and business details before seeking guidance
+          appropriate to your project and location.
+        </p>
+      </section>
     </div>
   );
 }
-

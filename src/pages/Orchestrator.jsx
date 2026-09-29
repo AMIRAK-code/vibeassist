@@ -1,95 +1,85 @@
-import React, { useState } from 'react';
-import { ShieldCheck, Activity, BrainCircuit, GitCommit, SearchCode, Database, Eye } from 'lucide-react';
-
+import { useState } from "react";
+import { PageHeader, Notice } from "../components/UI";
+const modules = [
+  {
+    id: "review",
+    title: "Code review",
+    description: "Review security and architecture findings before release.",
+  },
+  {
+    id: "checks",
+    title: "Pre-launch checks",
+    description: "Check common configuration and release issues.",
+  },
+  {
+    id: "context",
+    title: "Project context",
+    description: "Keep project decisions and implementation aligned.",
+  },
+  {
+    id: "tests",
+    title: "Test quality",
+    description: "Understand whether tests catch meaningful changes.",
+  },
+  {
+    id: "visual",
+    title: "Visual checks",
+    description: "Review layout changes across screen sizes.",
+  },
+  {
+    id: "history",
+    title: "Change history",
+    description: "Inspect checkpoints and plan recovery from unwanted changes.",
+  },
+  {
+    id: "routing",
+    title: "Model routing",
+    description: "Manage model availability and request routing.",
+  },
+];
 export default function Orchestrator() {
-  const [activeModule, setActiveModule] = useState(1);
-
-  const modules = [
-    { id: 1, title: 'Red Team Agents', icon: <BrainCircuit size={20} />, desc: 'Adversarial Review Sub-Agents (Security & Architecture)' },
-    { id: 2, title: 'Pre-Flight Scanner', icon: <SearchCode size={20} />, desc: 'Automated Vibe Diagnosis & Security Guardrails' },
-    { id: 3, title: 'Context & Drift', icon: <Database size={20} />, desc: 'Modular Context Management & Drift Watch' },
-    { id: 4, title: 'Mutation Validator', icon: <Activity size={20} />, desc: 'Anti-Tautological Testing (Detecting fake passing tests)' },
-    { id: 5, title: 'Vision Grounding', icon: <Eye size={20} />, desc: 'Playwright + VLM visual layout testing loop' },
-    { id: 6, title: 'Snapshot Engine', icon: <GitCommit size={20} />, desc: 'State Rewind & Strict Checkpointing (Git hooks)' },
-    { id: 7, title: 'Smart Token Gateway', icon: <ShieldCheck size={20} />, desc: 'LLM Routing & Rate Limit Fallbacks' }
-  ];
-
+  const [selected, setSelected] = useState("review");
+  const current = modules.find((module) => module.id === selected);
   return (
-    <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div className="mb-4">
-        <h2><span className="text-gradient">Anti-Fragile</span> Vibe Orchestrator</h2>
-        <p className="input-label mt-4">Premium Service: Intelligent orchestration layer preventing architectural collapse and security vulnerabilities.</p>
-      </div>
-
-      <div className="grid-2 gap-4" style={{ flex: 1, minHeight: '500px' }}>
-        
-        {/* Left Column: Module Selection */}
-        <div className="glass-panel flex-column gap-2" style={{ padding: '24px' }}>
-          <h3 className="mb-4">System Modules</h3>
-          {modules.map(mod => (
-            <div 
-              key={mod.id} 
-              className={`glass-panel flex-center gap-4 ${activeModule === mod.id ? 'active' : ''}`}
-              style={{ 
-                justifyContent: 'flex-start', 
-                cursor: 'pointer', 
-                border: activeModule === mod.id ? '1px solid var(--accent-2)' : '1px solid var(--panel-border)',
-                background: activeModule === mod.id ? 'rgba(0, 240, 255, 0.05)' : 'rgba(255, 255, 255, 0.02)',
-                padding: '16px'
-              }}
-              onClick={() => setActiveModule(mod.id)}
+    <div className="stack">
+      <PageHeader
+        title="Developer tools"
+        description="An early look at possible tools for checking your app before release."
+      />
+      <Notice>
+        <strong>These tools are planned, not running.</strong>
+        <p>
+          No repository is connected, no code is scanned, and no background
+          agents are active.
+        </p>
+      </Notice>
+      <div className="grid-2">
+        <div
+          className="glass-panel stack"
+          role="group"
+          aria-label="Tool previews"
+        >
+          {modules.map((module) => (
+            <button
+              className={`tool-option${selected === module.id ? " selected" : ""}`}
+              aria-pressed={selected === module.id}
+              onClick={() => setSelected(module.id)}
+              key={module.id}
             >
-              <div style={{ color: activeModule === mod.id ? 'var(--accent-2)' : 'var(--text-secondary)' }}>
-                {mod.icon}
-              </div>
-              <div>
-                <h4 style={{ color: activeModule === mod.id ? 'var(--accent-2)' : 'var(--text-secondary)' }}>{mod.title}</h4>
-                <p className="input-label" style={{ fontSize: '0.8rem', marginTop: '4px' }}>{mod.desc}</p>
-              </div>
-            </div>
+              {module.title}
+            </button>
           ))}
         </div>
-
-        {/* Right Column: Status & Simulation (Phase 1 Mock) */}
-        <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column' }}>
-          <div style={{ paddingBottom: '16px', borderBottom: '1px solid var(--panel-border)' }}>
-            <h3 className="text-gradient">Engine Status: Initializing Phase 1</h3>
-            <p className="input-label mt-2">Architecture scaffolding and schema generation active.</p>
-          </div>
-          
-          <div style={{ flex: 1, overflowY: 'auto', padding: '16px 0', fontFamily: 'monospace', fontSize: '0.85rem', color: 'var(--accent-2)' }}>
-            {activeModule === 1 && (
-              <div className="animate-fade-in">
-                <p>{'>'} SPWNING: BuilderAgent (Primary)</p>
-                <p>{'>'} SPWNING: SecurityAgent (Adversarial) [ISOLATED]</p>
-                <p>{'>'} SPWNING: ArchitectureAgent (Adversarial) [ISOLATED]</p>
-                <p>{'>'} STATUS: Waiting for code generation event...</p>
-              </div>
-            )}
-            {activeModule === 6 && (
-              <div className="animate-fade-in">
-                <p>{'>'} MOUNTING: Git-wrapper hook</p>
-                <p>{'>'} REPOSITORY: Shadow branch active (vibe-shadow-001)</p>
-                <p>{'>'} STATUS: Ready for state rewind requests...</p>
-              </div>
-            )}
-            {activeModule !== 1 && activeModule !== 6 && (
-              <div className="animate-fade-in">
-                <p>{'>'} MODULE ID: {activeModule}</p>
-                <p>{'>'} STATUS: API Endpoints scaffolded. Awaiting Phase 2-4 implementations.</p>
-                <p>{'>'} SYSTEM: Please approve Phase 1 architecture to proceed.</p>
-              </div>
-            )}
-          </div>
-
-          <div style={{ borderTop: '1px solid var(--panel-border)', paddingTop: '16px', display: 'flex', gap: '12px' }}>
-            <button className="btn btn-primary" style={{ flex: 1 }}>Run Backtest Simulator</button>
-            <button className="btn btn-secondary" style={{ flex: 1 }}>View API Specs</button>
-          </div>
-        </div>
-
+        <section className="glass-panel resource-card" aria-live="polite">
+          <span className="badge">Planned capability</span>
+          <h2>{current.title}</h2>
+          <p>{current.description}</p>
+          <p>
+            There are no results to display. This preview explains the intended
+            use of the tool without simulating a scan.
+          </p>
+        </section>
       </div>
     </div>
   );
 }
-
