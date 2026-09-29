@@ -189,3 +189,30 @@ tfoot { font-weight: 600; }
 .empty-state { display: flex; flex-direction: column; gap: 20px; align-items: flex-start; padding: clamp(24px, 5vw, 48px); }
 .empty-state p { max-width: 65ch; color: var(--text-secondary); }
 @media (max-width: 420px) { .chart-panel { padding: 16px 10px; } .chart-plot { height: 240px; } .period-control, .period-control select { width: 100%; } }
+
+/* Project setup */
+.setup-page { max-width: 660px; margin: auto; padding: 32px 16px 64px; }
+.setup-page > .brand { margin-bottom: 28px; }
+.setup-panel { padding: clamp(20px, 4vw, 40px); }
+.setup-progress { display: flex; gap: 24px; list-style: none; margin-bottom: 32px; font-size: .9rem; color: var(--text-secondary); flex-wrap: wrap; }
+.setup-progress li { display: flex; align-items: center; gap: 8px; }
+.setup-progress li > span { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; background: var(--surface-subtle); }
+.setup-progress [aria-current='step'] { color: var(--accent-2); font-weight: 600; }
+.setup-progress [aria-current='step'] > span { background: var(--accent-2); color: white; }
+.setup-intro { margin: 12px 0 28px; }
+.setup-panel h1:focus { outline: none; }
+.source-options { display: flex; flex-direction: column; gap: 10px; }
+.source-option { display: flex; align-items: flex-start; gap: 12px; padding: 16px; border: 1px solid var(--panel-border); border-radius: 10px; cursor: pointer; }
+.source-option input { margin-top: 5px; accent-color: var(--accent-2); width: 18px; height: 18px; flex-shrink: 0; }
+.source-option.selected { background: var(--selected-bg); border-color: var(--accent-2); }
+.source-option small { display: block; color: var(--text-secondary); font-size: .85rem; margin-top: 4px; }
+.setup-completion { display: flex; flex-direction: column; gap: 12px; }
+.setup-back { align-self: flex-start; }
+.setup-footnote { display: flex; align-items: flex-start; gap: 8px; color: var(--text-secondary); font-size: .85rem; margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--panel-border); }
+.setup-footnote svg { margin-top: 3px; }
+.text-button { color: var(--accent-2); background: none; border: 0; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; min-height: 44px; }
+.connection-card { display: flex; flex-direction: column; align-items: flex-start; gap: 16px; }
+.connection-card h2 { font-size: 1.2rem; }
+.connection-card .btn { margin-top: auto; width: 100%; }
+.connection-card > svg { color: var(--accent-2); }
+.storage-notice { padding: 12px 20px; background: #fff2d8; color: var(--warning); }
