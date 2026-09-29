@@ -1,218 +1,47 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Sparkles, ArrowRight, Code, Lock } from 'lucide-react';
+import { useEffect, useReducer, useRef } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { ArrowLeft, ArrowRight, Code, Check, Plug } from 'lucide-react';
+import { Notice } from '../components/UI';
+import { platforms, sources, createProject, onboardingReducer, validateProject } from '../data/project';
 
-export default function Onboarding({ onComplete }) {
-  const [step, setStep] = useState(1);
-  const [formData, setFormData] = useState({ 
-    name: '', age: '', 
-    goals: [], experience: 'Beginner', profitExpectancy: '$0 - $1,000',
-    email: '', password: '' 
-  });
-  
-  const [passwordError, setPasswordError] = useState('');
-  const [loading, setLoading] = useState(false);
+export default function Onboarding({ onComplete, project }) {
+  const [params] = useSearchParams();
+  const [state, dispatch] = useReducer(onboardingReducer, { step: 1, error: '', draft: { name: project?.name || (params.get('demo') === '1' ? 'Sample project' : ''), platform: project?.platform || 'Web / SaaS', source: project?.source || '' } });
+  const headingRef = useRef(null);
+  const nameRef = useRef(null);
   const navigate = useNavigate();
-
-  const handleNext = () => {
-    if (step === 3) {
-      // Password restraints validation
-      if (formData.password.length < 8) {
-        setPasswordError('Password must be at least 8 characters long.');
-        return;
-      }
-      if (!/\d/.test(formData.password)) {
-        setPasswordError('Password must contain at least one number.');
-        return;
-      }
-      if (!/[A-Z]/.test(formData.password)) {
-        setPasswordError('Password must contain at least one uppercase letter.');
-        return;
-      }
-      setPasswordError('');
-      handleSignUp();
-    } else {
-      setStep(step + 1);
-    }
-  };
-
-  const handleSignUp = async () => {
-    setLoading(true);
-    // Simulate database signup and saving profile data
-    setTimeout(() => {
-      setLoading(false);
-      onComplete(); // Tells app we are authenticated
-      navigate('/premium'); // Must show paywall next
-    }, 1500);
-  };
-
-  const toggleGoal = (goal) => {
-    setFormData(prev => {
-      if (prev.goals.includes(goal)) {
-        return { ...prev, goals: prev.goals.filter(g => g !== goal) };
-      } else {
-        return { ...prev, goals: [...prev.goals, goal] };
-      }
-    });
-  };
-
-  const goalsList = [
-    "Build a SaaS Empire",
-    "Develop Viral Mobile Games",
-    "Generate Passive Income",
-    "Automate Workflows with AI",
-    "Freelance App Development",
-    "Sell Micro-tools"
-  ];
-
-  return (
-    <div className="flex-center animate-fade-in" style={{ minHeight: '100vh', padding: '24px', background: 'radial-gradient(circle at 50% 0%, rgba(255, 46, 147, 0.1), transparent 50%)' }}>
-      <div className="glass-panel" style={{ maxWidth: '600px', width: '100%', position: 'relative' }}>
-        
-        <div className="text-center mb-4">
-          <Code className="text-gradient" size={48} style={{ margin: '0 auto 16px' }} />
-          <h2>Welcome to <span className="text-gradient">VibeAssist</span></h2>
-          <p className="input-label mt-4">Let's set up your profile so our AI can tailor your business plan perfectly.</p>
-        </div>
-
-        {step === 1 && (
-          <div className="animate-fade-in">
-            <h3 className="mb-4">Step 1: Basics (Optional)</h3>
-            <div className="input-group">
-              <label className="input-label">What's your name? (Optional)</label>
-              <input 
-                type="text" 
-                className="input-field" 
-                placeholder="Indie Hacker..."
-                value={formData.name}
-                onChange={(e) => setFormData({...formData, name: e.target.value})}
-              />
-            </div>
-            <div className="input-group">
-              <label className="input-label">How old are you? (Optional)</label>
-              <input 
-                type="number" 
-                className="input-field" 
-                placeholder="18"
-                value={formData.age}
-                onChange={(e) => setFormData({...formData, age: e.target.value})}
-              />
-            </div>
-            <button className="btn btn-primary w-full mt-4" onClick={handleNext}>
-              Continue <ArrowRight size={18} />
-            </button>
-          </div>
-        )}
-
-        {step === 2 && (
-          <div className="animate-fade-in">
-            <h3 className="mb-4">Step 2: Your Developer Profile</h3>
-            
-            <div className="input-group mb-4">
-              <label className="input-label mb-4" style={{ display: 'block' }}>What are your main app making goals?</label>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                {goalsList.map(goal => (
-                  <label key={goal} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', padding: '12px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', border: formData.goals.includes(goal) ? '1px solid var(--accent-2)' : '1px solid transparent' }}>
-                    <input 
-                      type="checkbox" 
-                      checked={formData.goals.includes(goal)} 
-                      onChange={() => toggleGoal(goal)} 
-                      style={{ accentColor: 'var(--accent-2)', width: '16px', height: '16px' }}
-                    />
-                    <span style={{ fontSize: '0.9rem' }}>{goal}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-            
-            <div className="grid-2">
-              <div className="input-group">
-                <label className="input-label">Profession Level</label>
-                <select 
-                  className="input-field" 
-                  value={formData.experience} 
-                  onChange={(e) => setFormData({...formData, experience: e.target.value})}
-                >
-                  <option>Beginner (Vibe Coder)</option>
-                  <option>Intermediate (Some apps built)</option>
-                  <option>Pro (Full time indie)</option>
-                </select>
-              </div>
-              <div className="input-group">
-                <label className="input-label">Profit Expectancy (Monthly)</label>
-                <select 
-                  className="input-field" 
-                  value={formData.profitExpectancy} 
-                  onChange={(e) => setFormData({...formData, profitExpectancy: e.target.value})}
-                >
-                  <option>$0 - $1,000</option>
-                  <option>$1,000 - $10,000</option>
-                  <option>$10k - $50k</option>
-                  <option>$50k+</option>
-                </select>
-              </div>
-            </div>
-
-            <button className="btn btn-primary w-full mt-4" onClick={handleNext}>
-              Continue <ArrowRight size={18} />
-            </button>
-          </div>
-        )}
-
-        {step === 3 && (
-          <div className="animate-fade-in">
-            <h3 className="mb-4">Step 3: Secure your account</h3>
-            <div className="input-group">
-              <label className="input-label">Email Address (Optional if skipping save)</label>
-              <input 
-                type="email" 
-                className="input-field" 
-                placeholder="hello@vibecoder.com"
-                value={formData.email}
-                onChange={(e) => setFormData({...formData, email: e.target.value})}
-              />
-            </div>
-            <div className="input-group">
-              <label className="input-label">Password</label>
-              <div style={{ position: 'relative' }}>
-                <input 
-                  type="password" 
-                  className="input-field" 
-                  style={{ width: '100%', paddingLeft: '40px', borderColor: passwordError ? '#ff5f56' : '' }}
-                  placeholder="••••••••"
-                  value={formData.password}
-                  onChange={(e) => setFormData({...formData, password: e.target.value})}
-                />
-                <Lock size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
-              </div>
-              {passwordError && <span style={{ color: '#ff5f56', fontSize: '0.8rem', marginTop: '4px' }}>{passwordError}</span>}
-              <span className="input-label" style={{ fontSize: '0.8rem', marginTop: '4px' }}>Must be 8+ characters, contain 1 number and 1 uppercase letter.</span>
-            </div>
-            <button className="btn btn-primary w-full mt-4" onClick={handleNext} disabled={loading || !formData.password}>
-              {loading ? (
-                <span>Creating Account & Database Profile...</span>
-              ) : (
-                <><Sparkles size={18} /> Create Account</>
-              )}
-            </button>
-          </div>
-        )}
-
-        {/* Progress indicators */}
-        <div className="flex-center mt-8 gap-4">
-          {[1, 2, 3].map(i => (
-            <div key={i} style={{ 
-              width: step === i ? '24px' : '8px', 
-              height: '8px', 
-              borderRadius: '4px', 
-              background: step >= i ? 'var(--accent-2)' : 'rgba(255,255,255,0.2)',
-              transition: 'var(--transition)'
-            }} />
-          ))}
-        </div>
-
-      </div>
-    </div>
-  );
+  const { step, draft, error } = state;
+  useEffect(() => { headingRef.current?.focus(); }, [step]);
+  const change = (field, value) => dispatch({ type: 'change', field, value });
+  function next(event) {
+    event.preventDefault();
+    dispatch({ type: 'next' });
+    if (validateProject(draft)) nameRef.current?.focus();
+  }
+  function finish(mode) {
+    onComplete(createProject(draft, mode));
+    navigate('/dashboard');
+  }
+  return <main className="setup-page">
+    <Link className="brand" to="/"><Code aria-hidden="true" />VibeAssist</Link>
+    <section className="setup-panel glass-panel">
+      <ol className="setup-progress" aria-label="Project setup progress"><li aria-current={step === 1 ? 'step' : undefined}><span>{step > 1 ? <Check size={16} aria-label="Complete" /> : '1'}</span>Project</li><li aria-current={step === 2 ? 'step' : undefined}><span>2</span>Data source</li></ol>
+      <span className="eyebrow">Step {step} of 2</span>
+      <h1 ref={headingRef} tabIndex={-1}>{step === 1 ? 'Start with your project.' : 'Choose where to begin.'}</h1>
+      <p className="muted setup-intro">{step === 1 ? 'A name and a platform are all you need. You can change them later.' : 'Save a preferred source for later, or explore the overview with sample data today.'}</p>
+      {step === 1 ? <form onSubmit={next} noValidate>
+        <div className="input-group"><label htmlFor="project-name">Project name</label><input ref={nameRef} id="project-name" className="input-field" value={draft.name} onChange={event => change('name', event.target.value)} placeholder="e.g. My next app" maxLength={80} required aria-invalid={Boolean(error)} aria-describedby={error ? 'project-error' : 'project-name-help'} autoComplete="off" /><span id="project-name-help" className="muted">Up to 80 characters. Saved only in this browser.</span>{error && <p id="project-error" className="error-text" role="alert">{error}</p>}</div>
+        <div className="input-group"><label htmlFor="project-platform">Platform</label><select id="project-platform" className="input-field" value={draft.platform} onChange={event => change('platform', event.target.value)}>{platforms.map(platform => <option key={platform}>{platform}</option>)}</select></div>
+        <button className="btn btn-primary w-full" type="submit">Choose a data source <ArrowRight size={18} aria-hidden="true" /></button>
+        <button className="btn btn-secondary w-full mt-4" type="button" onClick={() => finish('sample')}>Explore with sample data</button>
+      </form> : <div className="stack">
+        <Notice><strong>Live connections are not available yet.</strong><p>Selecting a source saves your preference. It does not authorize an account or import data.</p></Notice>
+        <fieldset className="source-options"><legend>Preferred data source <span className="muted">(optional)</span></legend>{[...sources, { id: '', name: 'Decide later', description: 'You can choose a source from Connections.' }].map(source => <label className={`source-option${draft.source === source.id ? ' selected' : ''}`} key={source.id || 'none'}><input type="radio" name="source" value={source.id} checked={draft.source === source.id} onChange={() => change('source', source.id)} /><span><strong>{source.name}</strong><small>{source.description}</small></span></label>)}</fieldset>
+        <div className="setup-completion"><button className="btn btn-primary" onClick={() => finish('sample')}>Explore with sample data <ArrowRight size={18} aria-hidden="true" /></button><button className="btn btn-secondary" onClick={() => finish('empty')}>{draft.source ? 'Save preference & open overview' : 'Skip for now'}</button></div>
+        {draft.source && <button className="text-button" onClick={() => finish('empty')}>Skip for now</button>}
+        <button className="btn btn-secondary setup-back" onClick={() => dispatch({ type: 'back' })}><ArrowLeft size={16} aria-hidden="true" />Back to project</button>
+      </div>}
+      <p className="setup-footnote"><Plug size={16} aria-hidden="true" />This is a local workspace, not account creation. No password or payment needed.</p>
+    </section>
+  </main>;
 }
-

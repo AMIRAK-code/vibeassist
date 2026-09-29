@@ -1,8 +1,8 @@
 import { lazy, Suspense, useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import AppLayout from './components/AppLayout';
+import { PROJECT_KEY, readProject } from './data/project';
 import Landing from './pages/Landing';
-const Dashboard = lazy(() => import('./pages/Dashboard')); 
 import Onboarding from './pages/Onboarding';
 import PremiumPaywall from './pages/PremiumPaywall';
 import Integrations from './pages/Integrations';
@@ -11,30 +11,32 @@ import PublishingGuide from './pages/PublishingGuide';
 import AdManager from './pages/AdManager';
 import Newsletter from './pages/Newsletter';
 import Orchestrator from './pages/Orchestrator';
-
-function PremiumGate({ hasPremium }) {
-  return hasPremium ? <Outlet /> : <Navigate to="/premium" replace />;
-}
+const Dashboard = lazy(() => import('./pages/Dashboard'));
 
 export default function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [hasPremium, setHasPremium] = useState(false);
-  return <BrowserRouter><Routes>
-    <Route path="/" element={<Landing />} />
-    <Route path="/onboarding" element={<Onboarding onComplete={() => setIsAuthenticated(true)} />} />
-    <Route path="/premium" element={isAuthenticated ? <PremiumPaywall onSubscribe={() => setHasPremium(true)} onSkip={() => {}} /> : <Navigate to="/onboarding" replace />} />
-    <Route element={isAuthenticated ? <AppLayout hasPremium={hasPremium} /> : <Navigate to="/onboarding" replace />}>
-      <Route path="/dashboard" element={<Suspense fallback={<p role="status">Loading overview…</p>}><Dashboard /></Suspense>} />
-      <Route path="/publishing" element={<PublishingGuide />} />
-      <Route path="/newsletter" element={<Newsletter />} />
-      <Route element={<PremiumGate hasPremium={hasPremium} />}>
-        <Route path="/integrations" element={<Integrations />} />
+  const [project, setProject] = useState(() => { try { return readProject(window.localStorage); } catch { return null; } });
+  const [storageError, setStorageError] = useState(false);
+  function saveProject(next) {
+    setProject(next);
+    try { localStorage.setItem(PROJECT_KEY, JSON.stringify(next)); setStorageError(false); }
+    catch { setStorageError(true); }
+  }
+  return <BrowserRouter>
+    {storageError && <p className="storage-notice" role="alert">Browser storage is unavailable. Your changes work for this visit, but will not survive a reload.</p>}
+    <Routes>
+      <Route path="/" element={<Landing hasProject={Boolean(project)} />} />
+      <Route path="/onboarding" element={<Onboarding project={project} onComplete={saveProject} />} />
+      <Route path="/premium" element={<PremiumPaywall onSubscribe={() => {}} onSkip={() => {}} />} />
+      <Route element={project ? <AppLayout project={project} hasPremium /> : <Navigate to="/onboarding" replace />}>
+        <Route path="/dashboard" element={<Suspense fallback={<p role="status">Loading overview…</p>}><Dashboard project={project} onExploreSample={() => saveProject({ ...project, mode: 'sample' })} /></Suspense>} />
+        <Route path="/integrations" element={<Integrations project={project} onUpdateProject={saveProject} />} />
         <Route path="/ai-analyzer" element={<AIAnalyzer />} />
+        <Route path="/publishing" element={<PublishingGuide />} />
+        <Route path="/newsletter" element={<Newsletter />} />
         <Route path="/ads" element={<AdManager />} />
         <Route path="/orchestrator" element={<Orchestrator />} />
       </Route>
-    </Route>
-    <Route path="*" element={<Navigate to="/" replace />} />
-  </Routes></BrowserRouter>;
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  </BrowserRouter>;
 }
-
