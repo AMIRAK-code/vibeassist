@@ -24,7 +24,7 @@ export default function PublishingGuide() {
         {/* Android */}
         <div className="glass-panel">
           <div className="flex-center gap-4" style={{ justifyContent: 'flex-start' }}>
-            <Smartphone size={32} color="#3DDC84" />
+            <Smartphone size={32} color="var(--success)" />
             <h3>Android & Play Store</h3>
           </div>
           <p className="input-label mt-4">Google Play Policies, 20-tester requirement for new devs, billing library implementation, and data safety forms.</p>
@@ -65,3 +65,4 @@ export default function PublishingGuide() {
     </div>
   );
 }
+

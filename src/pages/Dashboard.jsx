@@ -30,7 +30,7 @@ export default function Dashboard() {
             <DollarSign className="text-gradient" size={20} />
           </div>
           <h2 className="mt-4" style={{ fontSize: '2rem' }}>$19,550</h2>
-          <p style={{ color: '#00d2ff', fontSize: '0.8rem', marginTop: '8px' }}>+12.5% from last week</p>
+          <p style={{ color: 'var(--accent-2)', fontSize: '0.8rem', marginTop: '8px' }}>+12.5% from last week</p>
         </div>
 
         <div className="glass-panel">
@@ -39,7 +39,7 @@ export default function Dashboard() {
             <Download className="text-gradient" size={20} />
           </div>
           <h2 className="mt-4" style={{ fontSize: '2rem' }}>30,288</h2>
-          <p style={{ color: '#00d2ff', fontSize: '0.8rem', marginTop: '8px' }}>+5.2% from last week</p>
+          <p style={{ color: 'var(--accent-2)', fontSize: '0.8rem', marginTop: '8px' }}>+5.2% from last week</p>
         </div>
 
         <div className="glass-panel">
@@ -48,7 +48,7 @@ export default function Dashboard() {
             <TrendingUp className="text-gradient" size={20} />
           </div>
           <h2 className="mt-4" style={{ fontSize: '2rem' }}>4.8%</h2>
-          <p style={{ color: '#ff2e93', fontSize: '0.8rem', marginTop: '8px' }}>-0.4% from last week</p>
+          <p style={{ color: 'var(--accent-1)', fontSize: '0.8rem', marginTop: '8px' }}>-0.4% from last week</p>
         </div>
 
         <div className="glass-panel">
@@ -57,7 +57,7 @@ export default function Dashboard() {
             <Users className="text-gradient" size={20} />
           </div>
           <h2 className="mt-4" style={{ fontSize: '2rem' }}>12,400</h2>
-          <p style={{ color: '#00d2ff', fontSize: '0.8rem', marginTop: '8px' }}>+18.1% from last week</p>
+          <p style={{ color: 'var(--accent-2)', fontSize: '0.8rem', marginTop: '8px' }}>+18.1% from last week</p>
         </div>
       </div>
 
@@ -71,19 +71,20 @@ export default function Dashboard() {
                 <stop offset="95%" stopColor="#ff2e93" stopOpacity={0}/>
               </linearGradient>
               <linearGradient id="colorDownloads" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#00f0ff" stopOpacity={0.8}/>
-                <stop offset="95%" stopColor="#00f0ff" stopOpacity={0}/>
+                <stop offset="5%" stopColor="var(--accent-2)" stopOpacity={0.8}/>
+                <stop offset="95%" stopColor="var(--accent-2)" stopOpacity={0}/>
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-            <XAxis dataKey="name" stroke="rgba(255,255,255,0.5)" />
-            <YAxis stroke="rgba(255,255,255,0.5)" />
-            <Tooltip contentStyle={{ backgroundColor: '#050508', border: '1px solid rgba(255,255,255,0.1)' }} />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--panel-border)" />
+            <XAxis dataKey="name" stroke="var(--text-secondary)" />
+            <YAxis stroke="var(--text-secondary)" />
+            <Tooltip contentStyle={{ backgroundColor: 'var(--surface)', color: 'var(--text-primary)', border: '1px solid rgba(255,255,255,0.1)' }} />
             <Area type="monotone" dataKey="revenue" stroke="#ff2e93" fillOpacity={1} fill="url(#colorRevenue)" />
-            <Area type="monotone" dataKey="downloads" stroke="#00f0ff" fillOpacity={1} fill="url(#colorDownloads)" />
+            <Area type="monotone" dataKey="downloads" stroke="var(--accent-2)" fillOpacity={1} fill="url(#colorDownloads)" />
           </AreaChart>
         </ResponsiveContainer>
       </div>
     </div>
   );
 }
+

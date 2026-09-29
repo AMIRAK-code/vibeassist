@@ -215,3 +215,4 @@ export default function Onboarding({ onComplete }) {
     </div>
   );
 }
+

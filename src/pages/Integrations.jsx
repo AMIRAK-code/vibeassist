@@ -26,13 +26,13 @@ export default function Integrations() {
         <div className="glass-panel">
           <div className="flex-between">
             <div className="flex-center gap-4">
-              <Play size={32} color="#00f0ff" />
+              <Play size={32} color="var(--accent-2)" />
               <div>
                 <h3>Google Play Console</h3>
                 <p className="input-label" style={{ fontSize: '0.8rem' }}>Android App Data</p>
               </div>
             </div>
-            {connected.google ? <CheckCircle2 color="#00f0ff" /> : null}
+            {connected.google ? <CheckCircle2 color="var(--accent-2)" /> : null}
           </div>
           <p className="mt-4 input-label">Import downloads, uninstalls, crash rates, and in-app purchases.</p>
           <button 
@@ -47,13 +47,13 @@ export default function Integrations() {
         <div className="glass-panel">
           <div className="flex-between">
             <div className="flex-center gap-4">
-              <Apple size={32} color="#fff" />
+              <Apple size={32} color="var(--text-primary)" />
               <div>
                 <h3>Apple Developer</h3>
                 <p className="input-label" style={{ fontSize: '0.8rem' }}>iOS App Data</p>
               </div>
             </div>
-            {connected.apple ? <CheckCircle2 color="#fff" /> : null}
+            {connected.apple ? <CheckCircle2 color="var(--text-primary)" /> : null}
           </div>
           <p className="mt-4 input-label">Sync App Store sales, subscription retention, and impressions.</p>
           <button 
@@ -110,3 +110,4 @@ export default function Integrations() {
     </div>
   );
 }
+
