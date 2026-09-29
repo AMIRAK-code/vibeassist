@@ -1,5 +1,5 @@
 import { PageHeader, Notice, SampleBadge } from "../components/UI";
-export default function AdManager() {
+export default function CampaignOverview() {
   return (
     <div className="stack">
       <PageHeader
