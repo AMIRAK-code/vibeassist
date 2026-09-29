@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import AppLayout from './components/AppLayout';
 import Landing from './pages/Landing';
-import Dashboard from './pages/Dashboard';
+const Dashboard = lazy(() => import('./pages/Dashboard')); 
 import Onboarding from './pages/Onboarding';
 import PremiumPaywall from './pages/PremiumPaywall';
 import Integrations from './pages/Integrations';
@@ -24,7 +24,7 @@ export default function App() {
     <Route path="/onboarding" element={<Onboarding onComplete={() => setIsAuthenticated(true)} />} />
     <Route path="/premium" element={isAuthenticated ? <PremiumPaywall onSubscribe={() => setHasPremium(true)} onSkip={() => {}} /> : <Navigate to="/onboarding" replace />} />
     <Route element={isAuthenticated ? <AppLayout hasPremium={hasPremium} /> : <Navigate to="/onboarding" replace />}>
-      <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/dashboard" element={<Suspense fallback={<p role="status">Loading overview…</p>}><Dashboard /></Suspense>} />
       <Route path="/publishing" element={<PublishingGuide />} />
       <Route path="/newsletter" element={<Newsletter />} />
       <Route element={<PremiumGate hasPremium={hasPremium} />}>
@@ -37,3 +37,4 @@ export default function App() {
     <Route path="*" element={<Navigate to="/" replace />} />
   </Routes></BrowserRouter>;
 }
+
