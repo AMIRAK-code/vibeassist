@@ -8,7 +8,7 @@ import PremiumPaywall from "./pages/PremiumPaywall";
 import Integrations from "./pages/Integrations";
 import AIAnalyzer from "./pages/AIAnalyzer";
 import PublishingGuide from "./pages/PublishingGuide";
-import AdManager from "./pages/AdManager";
+import CampaignOverview from "./pages/CampaignOverview";
 import Newsletter from "./pages/Newsletter";
 import Orchestrator from "./pages/Orchestrator";
 const Dashboard = lazy(() => import("./pages/Dashboard"));
@@ -80,7 +80,7 @@ export default function App() {
             element={<PublishingGuide project={project} />}
           />
           <Route path="/newsletter" element={<Newsletter />} />
-          <Route path="/ads" element={<AdManager />} />
+          <Route path="/ads" element={<CampaignOverview />} />
           <Route path="/orchestrator" element={<Orchestrator />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
