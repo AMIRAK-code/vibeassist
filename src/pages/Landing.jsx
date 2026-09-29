@@ -1,97 +1,44 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Sparkles, Code, PlayCircle, ShieldCheck, TrendingUp } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ArrowRight, Code, BarChart3, Plug, Compass } from 'lucide-react';
+import { SampleBadge } from '../components/UI';
 
-export default function Landing() {
-  const navigate = useNavigate();
-
-  return (
-    <div className="animate-fade-in" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      
-      {/* Navbar */}
-      <nav style={{ padding: '24px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--panel-border)' }}>
-        <div className="flex-center gap-4">
-          <Code className="text-gradient" size={32} />
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>VibeAssist</h2>
-        </div>
-        <div className="flex-center gap-4">
-          <button className="btn btn-secondary" onClick={() => navigate('/onboarding')}>Sign In</button>
-          <button className="btn btn-primary" onClick={() => navigate('/onboarding')}>Get Started <Sparkles size={16} /></button>
-        </div>
+export default function Landing({ hasProject = false }) {
+  return <div className="landing">
+    <a className="skip-link" href="#landing-content">Skip to content</a>
+    <header className="landing-nav">
+      <Link to="/" className="brand"><Code aria-hidden="true" />VibeAssist</Link>
+      <nav className="landing-actions" aria-label="Getting started">
+        <a className="landing-demo-link" href="#product-preview">See the preview</a>
+        <Link className="btn btn-primary" to={hasProject ? '/dashboard' : '/onboarding'}>{hasProject ? 'Open workspace' : 'Get started'}<ArrowRight size={16} aria-hidden="true" /></Link>
       </nav>
-
-      {/* Hero Section */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '80px 24px', textAlign: 'center' }}>
-        <div style={{ background: 'rgba(255, 46, 147, 0.1)', color: 'var(--accent-1)', padding: '8px 16px', borderRadius: '20px', fontSize: '0.9rem', marginBottom: '24px', fontWeight: 'bold' }}>
-          ✨ The #1 Platform for Indie Hackers & Vibe Coders
+    </header>
+    <main id="landing-content" tabIndex={-1}>
+      <section className="landing-hero">
+        <span className="eyebrow">A little clarity for your next big idea</span>
+        <h1>Your apps.<br /><span className="text-gradient">A clearer next step.</span></h1>
+        <p>Bring your project into focus. Explore your numbers, plan your launch, and decide what to work on next.</p>
+        <div className="hero-actions">
+          <Link className="btn btn-primary" to="/onboarding">Set up your project <ArrowRight size={18} aria-hidden="true" /></Link>
+          <Link className="btn btn-secondary" to="/onboarding?demo=1">Explore with sample data</Link>
         </div>
-        
-        <h1 style={{ fontSize: '4.5rem', lineHeight: '1.1', maxWidth: '800px', marginBottom: '24px' }}>
-          Build your empire.<br />
-          <span className="text-gradient">Maximize your profits.</span>
-        </h1>
-        
-        <p className="input-label" style={{ fontSize: '1.2rem', maxWidth: '600px', marginBottom: '40px', lineHeight: '1.6' }}>
-          Connect all your developer accounts (Apple, Google, Stripe). Let our AI analyze your business plan, optimize your ads, and handle legal compliance automatically.
-        </p>
-
-        <div className="flex-center gap-4">
-          <button className="btn btn-primary" style={{ padding: '16px 32px', fontSize: '1.1rem' }} onClick={() => navigate('/onboarding')}>
-            Start Building Now
-          </button>
-          <button className="btn btn-secondary" style={{ padding: '16px 32px', fontSize: '1.1rem' }}>
-            <PlayCircle size={20} /> Watch Demo
-          </button>
+        <p className="hero-note">An early preview. No payment or account required.<br />Live connections and AI analysis are not available yet.</p>
+      </section>
+      <section id="product-preview" className="product-preview glass-panel" aria-labelledby="preview-title">
+        <div className="flex-between"><div><span className="eyebrow">Your workspace, at a glance</span><h2 id="preview-title">Make room for the bigger picture.</h2></div><SampleBadge /></div>
+        <div className="preview-grid">
+          <div className="preview-metric"><span>Revenue · sample week</span><strong>$19,550</strong><p>A clear view of what your app earns.</p></div>
+          <div className="preview-metric"><span>Downloads · sample week</span><strong>30,406</strong><p>Understand reach alongside revenue.</p></div>
+          <div className="preview-next"><Compass size={24} aria-hidden="true" /><h3>One useful next step</h3><p>Choose a project, explore the overview, then build your launch checklist.</p><Link to="/onboarding">Create your workspace <ArrowRight size={16} aria-hidden="true" /></Link></div>
         </div>
-
-        {/* Demo App Visual (Mockup) */}
-        <div className="glass-panel mt-4" style={{ marginTop: '64px', width: '100%', maxWidth: '1000px', padding: '8px', border: '1px solid var(--accent-2)', boxShadow: '0 20px 60px rgba(0, 240, 255, 0.15)' }}>
-          <div style={{ background: '#0a0a0f', color: '#fff', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--panel-border)' }}>
-            
-            {/* Fake Dashboard Header */}
-            <div style={{ height: '40px', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', padding: '0 16px', gap: '8px', borderBottom: '1px solid var(--panel-border)' }}>
-              <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ff5f56' }} />
-              <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ffbd2e' }} />
-              <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#27c93f' }} />
-            </div>
-
-            {/* Fake Dashboard Content */}
-            <div style={{ padding: '40px', display: 'flex', flexDirection: 'column', gap: '24px', position: 'relative' }}>
-              <div className="flex-between">
-                <div>
-                  <h3 style={{ fontSize: '1.5rem' }}>Overview</h3>
-                  <p className="input-label">Real-time metrics</p>
-                </div>
-                <div style={{ padding: '8px 16px', background: 'var(--accent-gradient)', borderRadius: '8px', color: 'white', fontWeight: 'bold' }}>
-                  $14,250 Today
-                </div>
-              </div>
-
-              <div className="grid-3">
-                <div style={{ height: '100px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid var(--panel-border)', padding: '16px' }}>
-                  <TrendingUp color="var(--accent-1)" />
-                  <p style={{ marginTop: '16px', fontWeight: 'bold', fontSize: '1.2rem' }}>+24% Growth</p>
-                </div>
-                <div style={{ height: '100px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid var(--panel-border)', padding: '16px' }}>
-                  <ShieldCheck color="var(--accent-2)" />
-                  <p style={{ marginTop: '16px', fontWeight: 'bold', fontSize: '1.2rem' }}>Legal Compliant</p>
-                </div>
-                <div style={{ height: '100px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid var(--panel-border)', padding: '16px' }}>
-                  <Sparkles color="white" />
-                  <p style={{ marginTop: '16px', fontWeight: 'bold', fontSize: '1.2rem' }}>AI Optimized</p>
-                </div>
-              </div>
-              
-              {/* Play Overlay */}
-              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: 'rgba(0,0,0,0.6)', borderRadius: '50%', padding: '16px', cursor: 'pointer', border: '2px solid rgba(255,255,255,0.5)', backdropFilter: 'blur(4px)' }}>
-                <PlayCircle size={48} color="white" />
-              </div>
-            </div>
-
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+      </section>
+      <section className="landing-features" aria-label="How it works">
+        {[
+          { icon: Plug, title: 'Start with your project', text: 'Choose your platform and the data source you would like to connect.' },
+          { icon: BarChart3, title: 'Understand the numbers', text: 'Explore clearly labeled sample revenue and downloads, with readable charts and tables.' },
+          { icon: Compass, title: 'Find your next action', text: 'Move from the overview to practical launch resources and planning tools.' },
+        ].map(({ icon: Icon, title, text }) => <article key={title}><Icon size={24} aria-hidden="true" /><h3>{title}</h3><p>{text}</p></article>)}
+      </section>
+    </main>
+    <footer className="landing-footer"><span>VibeAssist · Built for independent makers</span><span>Your project stays in this browser.</span></footer>
+  </div>;
 }
-
