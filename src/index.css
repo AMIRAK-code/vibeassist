@@ -51,18 +51,18 @@ h1, h2, h3, h4, h5, h6 {
   
   /* Claymorphism Shadows: Outer drop, Outer highlight, Inner highlight, Inner shadow */
   box-shadow: 
-    8px 8px 16px rgba(0, 0, 0, 0.06),
-    -8px -8px 16px rgba(255, 255, 255, 0.8),
-    inset 4px 4px 10px rgba(255, 255, 255, 0.9),
-    inset -4px -4px 10px rgba(0, 0, 0, 0.03);
+    10px 10px 24px rgba(0, 0, 0, 0.12),
+    -10px -10px 24px rgba(255, 255, 255, 1),
+    inset 4px 4px 12px rgba(255, 255, 255, 1),
+    inset -4px -4px 12px rgba(0, 0, 0, 0.06);
 }
 
 .glass-panel:hover {
   box-shadow: 
-    12px 12px 20px rgba(0, 0, 0, 0.08),
-    -12px -12px 20px rgba(255, 255, 255, 0.9),
-    inset 4px 4px 10px rgba(255, 255, 255, 0.9),
-    inset -4px -4px 10px rgba(0, 0, 0, 0.03);
+    14px 14px 28px rgba(0, 0, 0, 0.15),
+    -14px -14px 28px rgba(255, 255, 255, 1),
+    inset 4px 4px 12px rgba(255, 255, 255, 1),
+    inset -4px -4px 12px rgba(0, 0, 0, 0.06);
   transform: translateY(-2px);
 }
 

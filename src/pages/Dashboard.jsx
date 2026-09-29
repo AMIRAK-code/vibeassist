@@ -1,15 +1,22 @@
 import React from 'react';
 import { DollarSign, Download, Activity, TrendingUp, Users } from 'lucide-react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { ComposedChart, Line, Area, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 const data = [
-  { name: 'Mon', revenue: 4000, downloads: 2400 },
-  { name: 'Tue', revenue: 3000, downloads: 1398 },
-  { name: 'Wed', revenue: 2000, downloads: 9800 },
-  { name: 'Thu', revenue: 2780, downloads: 3908 },
-  { name: 'Fri', revenue: 1890, downloads: 4800 },
-  { name: 'Sat', revenue: 2390, downloads: 3800 },
-  { name: 'Sun', revenue: 3490, downloads: 4300 },
+  { name: '1st', revenue: 4000, profit: 2400, adSpend: 1000, organicDownloads: 1200, paidDownloads: 1200 },
+  { name: '3rd', revenue: 3000, profit: 1398, adSpend: 1100, organicDownloads: 800, paidDownloads: 598 },
+  { name: '5th', revenue: 2000, profit: 980, adSpend: 800, organicDownloads: 500, paidDownloads: 480 },
+  { name: '7th', revenue: 2780, profit: 1908, adSpend: 1200, organicDownloads: 2000, paidDownloads: 1908 },
+  { name: '9th', revenue: 3890, profit: 2800, adSpend: 1500, organicDownloads: 2400, paidDownloads: 2400 },
+  { name: '11th', revenue: 4390, profit: 3800, adSpend: 1400, organicDownloads: 2100, paidDownloads: 1700 },
+  { name: '13th', revenue: 5490, profit: 4300, adSpend: 1800, organicDownloads: 2800, paidDownloads: 1500 },
+  { name: '15th', revenue: 4800, profit: 3900, adSpend: 1600, organicDownloads: 2500, paidDownloads: 1300 },
+  { name: '17th', revenue: 6200, profit: 5100, adSpend: 2000, organicDownloads: 3200, paidDownloads: 1800 },
+  { name: '19th', revenue: 7400, profit: 6000, adSpend: 2200, organicDownloads: 3500, paidDownloads: 2000 },
+  { name: '21st', revenue: 8100, profit: 6800, adSpend: 2400, organicDownloads: 4000, paidDownloads: 2300 },
+  { name: '23rd', revenue: 7800, profit: 6200, adSpend: 2100, organicDownloads: 3800, paidDownloads: 2100 },
+  { name: '25th', revenue: 9200, profit: 7500, adSpend: 2600, organicDownloads: 4500, paidDownloads: 2600 },
+  { name: '27th', revenue: 10500, profit: 8900, adSpend: 3000, organicDownloads: 5200, paidDownloads: 3100 },
 ];
 
 export default function Dashboard() {
@@ -30,7 +37,7 @@ export default function Dashboard() {
             <DollarSign className="text-gradient" size={20} />
           </div>
           <h2 className="mt-4" style={{ fontSize: '2rem' }}>$19,550</h2>
-          <p style={{ color: '#00d2ff', fontSize: '0.8rem', marginTop: '8px' }}>+12.5% from last week</p>
+          <p style={{ color: '#00b0d0', fontSize: '0.8rem', marginTop: '8px', fontWeight: 'bold' }}>+12.5% from last week</p>
         </div>
 
         <div className="glass-panel">
@@ -39,7 +46,7 @@ export default function Dashboard() {
             <Download className="text-gradient" size={20} />
           </div>
           <h2 className="mt-4" style={{ fontSize: '2rem' }}>30,288</h2>
-          <p style={{ color: '#00d2ff', fontSize: '0.8rem', marginTop: '8px' }}>+5.2% from last week</p>
+          <p style={{ color: '#00b0d0', fontSize: '0.8rem', marginTop: '8px', fontWeight: 'bold' }}>+5.2% from last week</p>
         </div>
 
         <div className="glass-panel">
@@ -48,7 +55,7 @@ export default function Dashboard() {
             <TrendingUp className="text-gradient" size={20} />
           </div>
           <h2 className="mt-4" style={{ fontSize: '2rem' }}>4.8%</h2>
-          <p style={{ color: '#ff2e93', fontSize: '0.8rem', marginTop: '8px' }}>-0.4% from last week</p>
+          <p style={{ color: '#ff2e93', fontSize: '0.8rem', marginTop: '8px', fontWeight: 'bold' }}>-0.4% from last week</p>
         </div>
 
         <div className="glass-panel">
@@ -57,31 +64,42 @@ export default function Dashboard() {
             <Users className="text-gradient" size={20} />
           </div>
           <h2 className="mt-4" style={{ fontSize: '2rem' }}>12,400</h2>
-          <p style={{ color: '#00d2ff', fontSize: '0.8rem', marginTop: '8px' }}>+18.1% from last week</p>
+          <p style={{ color: '#00b0d0', fontSize: '0.8rem', marginTop: '8px', fontWeight: 'bold' }}>+18.1% from last week</p>
         </div>
       </div>
 
-      <div className="glass-panel mt-4" style={{ height: '400px' }}>
-        <h3 className="mb-4">Revenue & Downloads Chart</h3>
+      <div className="glass-panel mt-4" style={{ height: '450px', padding: '32px' }}>
+        <h3 className="mb-4">Comprehensive Growth & Profit Analysis</h3>
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+          <ComposedChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 20 }}>
             <defs>
+              <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#3DDC84" stopOpacity={0.4}/>
+                <stop offset="95%" stopColor="#3DDC84" stopOpacity={0}/>
+              </linearGradient>
               <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#ff2e93" stopOpacity={0.8}/>
+                <stop offset="5%" stopColor="#ff2e93" stopOpacity={0.4}/>
                 <stop offset="95%" stopColor="#ff2e93" stopOpacity={0}/>
               </linearGradient>
-              <linearGradient id="colorDownloads" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#00f0ff" stopOpacity={0.8}/>
-                <stop offset="95%" stopColor="#00f0ff" stopOpacity={0}/>
-              </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-            <XAxis dataKey="name" stroke="rgba(255,255,255,0.5)" />
-            <YAxis stroke="rgba(255,255,255,0.5)" />
-            <Tooltip contentStyle={{ backgroundColor: '#050508', border: '1px solid rgba(255,255,255,0.1)' }} />
-            <Area type="monotone" dataKey="revenue" stroke="#ff2e93" fillOpacity={1} fill="url(#colorRevenue)" />
-            <Area type="monotone" dataKey="downloads" stroke="#00f0ff" fillOpacity={1} fill="url(#colorDownloads)" />
-          </AreaChart>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" />
+            <XAxis dataKey="name" stroke="#888" tick={{ fill: '#888' }} />
+            <YAxis stroke="#888" tick={{ fill: '#888' }} />
+            <Tooltip 
+              contentStyle={{ backgroundColor: '#FAF9F6', borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }} 
+              itemStyle={{ fontWeight: 'bold' }}
+            />
+            <Legend verticalAlign="top" height={36}/>
+            
+            {/* The multi-layered chart */}
+            <Area type="monotone" dataKey="revenue" name="Gross Revenue" fill="url(#colorRevenue)" stroke="#ff2e93" strokeWidth={2} />
+            <Area type="monotone" dataKey="profit" name="Net Profit" fill="url(#colorProfit)" stroke="#3DDC84" strokeWidth={3} />
+            
+            <Bar dataKey="paidDownloads" name="Paid Acquisition" barSize={12} fill="#00b0d0" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="organicDownloads" name="Organic Installs" barSize={12} fill="#FCC624" radius={[4, 4, 0, 0]} />
+            
+            <Line type="monotone" dataKey="adSpend" name="Ad Spend" stroke="#000" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 4 }} />
+          </ComposedChart>
         </ResponsiveContainer>
       </div>
     </div>
