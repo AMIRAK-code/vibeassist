@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Link, Outlet, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Code, TrendingUp, Cpu, Newspaper, Megaphone, ShieldAlert, Sparkles, Lock, ShieldCheck } from 'lucide-react';
 import Landing from './pages/Landing';
 import Dashboard from './pages/Dashboard';
@@ -76,69 +76,86 @@ function Sidebar({ hasPremium }) {
   );
 }
 
-function MainLayout({ children, hasPremium }) {
+function MainLayout({ hasPremium }) {
   return (
     <div className="app-container animate-fade-in">
       <Sidebar hasPremium={hasPremium} />
       <div className="main-content">
-        {children}
+        <Outlet />
       </div>
     </div>
   );
 }
 
+// General Auth Guard (Free or Premium). Redirects use `replace` so the Back
+// button skips the guarded URL instead of bouncing through the redirect again.
+function AuthRoute({ isAuthenticated, hasPremium }) {
+  if (!isAuthenticated) return <Navigate to="/onboarding" replace />;
+  return <MainLayout hasPremium={hasPremium} />;
+}
+
+// Premium Only Guard (nested inside AuthRoute, so the user is already signed in)
+function PremiumRoute({ hasPremium }) {
+  if (!hasPremium) return <Navigate to="/premium" replace />;
+  return <Outlet />;
+}
+
+const initialConnections = { google: false, apple: false, stripe: false, custom: false };
+
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [hasPremium, setHasPremium] = useState(false);
+  const [profile, setProfile] = useState(null);
+  const [connections, setConnections] = useState(initialConnections);
 
-  // General Auth Guard (Free or Premium)
-  const AuthRoute = ({ children }) => {
-    if (!isAuthenticated) return <Navigate to="/onboarding" />;
-    return <MainLayout hasPremium={hasPremium}>{children}</MainLayout>;
+  const handleOnboardingComplete = (answers) => {
+    setProfile(answers);
+    setIsAuthenticated(true);
   };
 
-  // Premium Only Guard
-  const PremiumRoute = ({ children }) => {
-    if (!isAuthenticated) return <Navigate to="/onboarding" />;
-    if (!hasPremium) return <Navigate to="/premium" />;
-    return <MainLayout hasPremium={hasPremium}>{children}</MainLayout>;
+  const toggleConnection = (platform) => {
+    setConnections(prev => ({ ...prev, [platform]: !prev[platform] }));
   };
 
   return (
     <Router>
       <Routes>
         <Route path="/" element={<Landing />} />
-        
-        <Route 
-          path="/onboarding" 
-          element={<Onboarding onComplete={() => setIsAuthenticated(true)} />} 
-        />
-        
-        <Route 
-          path="/premium" 
-          element={
-            isAuthenticated ? 
-            <PremiumPaywall 
-              onSubscribe={() => setHasPremium(true)} 
-              onSkip={() => setHasPremium(false)}
-            /> : 
-            <Navigate to="/onboarding" />
-          } 
+
+        <Route
+          path="/onboarding"
+          element={<Onboarding onComplete={handleOnboardingComplete} />}
         />
 
-        {/* Free Tier Accessible Routes */}
-        <Route path="/dashboard" element={<AuthRoute><Dashboard /></AuthRoute>} />
-        <Route path="/publishing" element={<AuthRoute><PublishingGuide /></AuthRoute>} />
-        <Route path="/newsletter" element={<AuthRoute><Newsletter /></AuthRoute>} />
-        
-        {/* Premium Only Routes */}
-        <Route path="/integrations" element={<PremiumRoute><Integrations /></PremiumRoute>} />
-        <Route path="/ai-analyzer" element={<PremiumRoute><AIAnalyzer /></PremiumRoute>} />
-        <Route path="/ads" element={<PremiumRoute><CampaignOverview /></PremiumRoute>} />
-        <Route path="/orchestrator" element={<PremiumRoute><Orchestrator /></PremiumRoute>} />
-        
+        <Route
+          path="/premium"
+          element={
+            isAuthenticated ?
+            <PremiumPaywall
+              onSubscribe={() => setHasPremium(true)}
+              onSkip={() => setHasPremium(false)}
+            /> :
+            <Navigate to="/onboarding" replace />
+          }
+        />
+
+        <Route element={<AuthRoute isAuthenticated={isAuthenticated} hasPremium={hasPremium} />}>
+          {/* Free Tier Accessible Routes */}
+          <Route path="/dashboard" element={<Dashboard profile={profile} />} />
+          <Route path="/publishing" element={<PublishingGuide />} />
+          <Route path="/newsletter" element={<Newsletter />} />
+
+          {/* Premium Only Routes */}
+          <Route element={<PremiumRoute hasPremium={hasPremium} />}>
+            <Route path="/integrations" element={<Integrations connections={connections} onToggle={toggleConnection} />} />
+            <Route path="/ai-analyzer" element={<AIAnalyzer profile={profile} />} />
+            <Route path="/ads" element={<CampaignOverview />} />
+            <Route path="/orchestrator" element={<Orchestrator />} />
+          </Route>
+        </Route>
+
         {/* Fallback */}
-        <Route path="*" element={<Navigate to="/" />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
   );
