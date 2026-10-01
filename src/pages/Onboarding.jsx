@@ -1,32 +1,41 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Sparkles, ArrowRight, Code, Lock } from 'lucide-react';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { Sparkles, ArrowRight, Code, Lock, MailCheck } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../context/auth';
+import { EXPERIENCE_OPTIONS, GOALS, PROFIT_OPTIONS } from '../lib/options';
+import { PASSWORD_HINT, validatePassword } from '../lib/password';
 
-export default function Onboarding({ onComplete }) {
+export default function Onboarding() {
+  const { user } = useAuth();
   const [step, setStep] = useState(1);
-  const [formData, setFormData] = useState({ 
-    name: '', age: '', 
+  const [formData, setFormData] = useState({
+    name: '', age: '',
     goals: [], experience: 'Beginner', profitExpectancy: '$0 - $1,000',
-    email: '', password: '' 
+    email: '', password: ''
   });
-  
+
   const [passwordError, setPasswordError] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [signupError, setSignupError] = useState('');
+  const [confirmationSentTo, setConfirmationSentTo] = useState('');
   const [loading, setLoading] = useState(false);
+  // Set while this page is creating the account, so the redirect below doesn't race it
+  const [signingUp, setSigningUp] = useState(false);
   const navigate = useNavigate();
+
+  // Already signed in: nothing to set up
+  if (user && !signingUp) return <Navigate to="/dashboard" replace />;
 
   const handleNext = () => {
     if (step === 3) {
-      // Password restraints validation
-      if (formData.password.length < 8) {
-        setPasswordError('Password must be at least 8 characters long.');
+      if (!/^\S+@\S+\.\S+$/.test(formData.email.trim())) {
+        setEmailError('Enter a valid email address. You will use it to sign in.');
         return;
       }
-      if (!/\d/.test(formData.password)) {
-        setPasswordError('Password must contain at least one number.');
-        return;
-      }
-      if (!/[A-Z]/.test(formData.password)) {
-        setPasswordError('Password must contain at least one uppercase letter.');
+      const error = validatePassword(formData.password);
+      if (error) {
+        setPasswordError(error);
         return;
       }
       setPasswordError('');
@@ -37,15 +46,38 @@ export default function Onboarding({ onComplete }) {
   };
 
   const handleSignUp = async () => {
+    setSigningUp(true);
     setLoading(true);
-    // Simulate database signup and saving profile data
-    setTimeout(() => {
-      setLoading(false);
-      // Hand every answer except the password to the app's shared profile
-      const { name, age, goals, experience, profitExpectancy, email } = formData;
-      onComplete({ name: name.trim(), age, goals, experience, profitExpectancy, email: email.trim() }); // Tells app we are authenticated
+    setSignupError('');
+    // The answers travel as user metadata; a database trigger turns them into the profile row
+    const { data, error } = await supabase.auth.signUp({
+      email: formData.email.trim(),
+      password: formData.password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/premium`,
+        data: {
+          name: formData.name.trim(),
+          age: formData.age,
+          goals: formData.goals,
+          experience: formData.experience,
+          profit_expectancy: formData.profitExpectancy,
+        },
+      },
+    });
+    setLoading(false);
+
+    if (error) {
+      setSigningUp(false);
+      setSignupError(error.code === 'user_already_exists' ? 'An account with this email already exists. Sign in instead.' : error.message);
+      return;
+    }
+    if (data.session) {
       navigate('/premium'); // Must show paywall next
-    }, 1500);
+    } else {
+      // Email confirmation is on: the link in the email signs them in and opens the paywall
+      setSigningUp(false);
+      setConfirmationSentTo(formData.email.trim());
+    }
   };
 
   const toggleGoal = (goal) => {
@@ -58,14 +90,20 @@ export default function Onboarding({ onComplete }) {
     });
   };
 
-  const goalsList = [
-    "Build a SaaS Empire",
-    "Develop Viral Mobile Games",
-    "Generate Passive Income",
-    "Automate Workflows with AI",
-    "Freelance App Development",
-    "Sell Micro-tools"
-  ];
+  if (confirmationSentTo) {
+    return (
+      <div className="flex-center animate-fade-in" style={{ minHeight: '100vh', padding: '24px' }}>
+        <div className="glass-panel text-center" style={{ maxWidth: '480px' }}>
+          <MailCheck className="text-gradient" size={48} style={{ margin: '0 auto 16px' }} />
+          <h2>Check your inbox</h2>
+          <p className="input-label mt-4">
+            We sent a confirmation link to <strong>{confirmationSentTo}</strong>. Open it to finish creating your account.
+          </p>
+          <Link to="/signin" className="btn btn-secondary mt-4" style={{ textDecoration: 'none' }}>I've confirmed, sign me in</Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-center animate-fade-in" style={{ minHeight: '100vh', padding: '24px', background: 'radial-gradient(circle at 50% 0%, rgba(255, 46, 147, 0.1), transparent 50%)' }}>
@@ -113,7 +151,7 @@ export default function Onboarding({ onComplete }) {
             <div className="input-group mb-4">
               <label className="input-label mb-4" style={{ display: 'block' }}>What are your main app making goals?</label>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                {goalsList.map(goal => (
+                {GOALS.map(goal => (
                   <label key={goal} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', padding: '12px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', border: formData.goals.includes(goal) ? '1px solid var(--accent-2)' : '1px solid transparent' }}>
                     <input 
                       type="checkbox" 
@@ -135,9 +173,9 @@ export default function Onboarding({ onComplete }) {
                   value={formData.experience} 
                   onChange={(e) => setFormData({...formData, experience: e.target.value})}
                 >
-                  <option value="Beginner">Beginner (Vibe Coder)</option>
-                  <option value="Intermediate">Intermediate (Some apps built)</option>
-                  <option value="Pro">Pro (Full time indie)</option>
+                  {EXPERIENCE_OPTIONS.map(option => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
                 </select>
               </div>
               <div className="input-group">
@@ -147,10 +185,7 @@ export default function Onboarding({ onComplete }) {
                   value={formData.profitExpectancy} 
                   onChange={(e) => setFormData({...formData, profitExpectancy: e.target.value})}
                 >
-                  <option>$0 - $1,000</option>
-                  <option>$1,000 - $10,000</option>
-                  <option>$10k - $50k</option>
-                  <option>$50k+</option>
+                  {PROFIT_OPTIONS.map(option => <option key={option}>{option}</option>)}
                 </select>
               </div>
             </div>
@@ -165,21 +200,30 @@ export default function Onboarding({ onComplete }) {
           <div className="animate-fade-in">
             <h3 className="mb-4">Step 3: Secure your account</h3>
             <div className="input-group">
-              <label className="input-label">Email Address (Optional if skipping save)</label>
-              <input 
-                type="email" 
-                className="input-field" 
+              <label className="input-label" htmlFor="signup-email">Email Address</label>
+              <input
+                id="signup-email"
+                type="email"
+                className="input-field"
                 placeholder="hello@vibecoder.com"
+                autoComplete="email"
+                aria-invalid={Boolean(emailError)}
                 value={formData.email}
-                onChange={(e) => setFormData({...formData, email: e.target.value})}
+                onChange={(e) => {
+                  setFormData({...formData, email: e.target.value});
+                  setEmailError('');
+                }}
               />
+              {emailError && <span style={{ color: '#ff5f56', fontSize: '0.8rem', marginTop: '4px' }}>{emailError}</span>}
             </div>
             <div className="input-group">
               <label className="input-label">Password</label>
               <div style={{ position: 'relative' }}>
-                <input 
-                  type="password" 
-                  className="input-field" 
+                <input
+                  type="password"
+                  className="input-field"
+                  autoComplete="new-password"
+                  aria-label="Password"
                   style={{ width: '100%', paddingLeft: '40px' }}
                   aria-invalid={Boolean(passwordError)}
                   placeholder="••••••••"
@@ -192,17 +236,26 @@ export default function Onboarding({ onComplete }) {
                 <Lock size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
               </div>
               {passwordError && <span style={{ color: '#ff5f56', fontSize: '0.8rem', marginTop: '4px' }}>{passwordError}</span>}
-              <span className="input-label" style={{ fontSize: '0.8rem', marginTop: '4px' }}>Must be 8+ characters, contain 1 number and 1 uppercase letter.</span>
+              <span className="input-label" style={{ fontSize: '0.8rem', marginTop: '4px' }}>{PASSWORD_HINT}</span>
             </div>
+            {signupError && (
+              <p role="alert" style={{ color: '#d93025', fontSize: '0.9rem' }}>
+                {signupError} {signupError.includes('Sign in') && <Link to="/signin" style={{ color: 'var(--accent-1)' }}>Go to sign in</Link>}
+              </p>
+            )}
             <button className="btn btn-primary w-full mt-4" onClick={handleNext} disabled={loading || !formData.password}>
               {loading ? (
-                <span>Creating Account & Database Profile...</span>
+                <span>Creating your account…</span>
               ) : (
                 <><Sparkles size={18} /> Create Account</>
               )}
             </button>
           </div>
         )}
+
+        <p className="input-label text-center mt-4" style={{ fontSize: '0.9rem' }}>
+          Already have an account? <Link to="/signin" style={{ color: 'var(--accent-1)' }}>Sign in</Link>
+        </p>
 
         {/* Progress indicators */}
         <div className="flex-center mt-8 gap-4">

@@ -1,7 +1,13 @@
-import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, Link, Outlet, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Code, TrendingUp, Cpu, Newspaper, Megaphone, ShieldAlert, Sparkles, Lock, ShieldCheck } from 'lucide-react';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { LayoutDashboard, Code, TrendingUp, Cpu, Newspaper, Megaphone, ShieldAlert, Sparkles, Lock, ShieldCheck, LogOut } from 'lucide-react';
+import { supabase } from './lib/supabase';
+import { AuthProvider } from './context/AuthContext';
+import { useAuth } from './context/auth';
+import FullPageSpinner from './components/FullPageSpinner';
 import Landing from './pages/Landing';
+import SignIn from './pages/SignIn';
+import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
 import Onboarding from './pages/Onboarding';
 import PremiumPaywall from './pages/PremiumPaywall';
@@ -12,9 +18,16 @@ import CampaignOverview from './pages/CampaignOverview';
 import Newsletter from './pages/Newsletter';
 import Orchestrator from './pages/Orchestrator';
 
-function Sidebar({ hasPremium }) {
+function Sidebar() {
+  const { user, hasPremium, signOut } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const isActive = (path) => location.pathname === path;
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/', { replace: true });
+  };
 
   return (
     <div className="sidebar">
@@ -71,15 +84,23 @@ function Sidebar({ hasPremium }) {
             </div>
           </Link>
         )}
+        <div className="flex-between" style={{ marginTop: '16px', gap: '8px' }}>
+          <span className="input-label" style={{ fontSize: '0.8rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={user?.email}>
+            {user?.email}
+          </span>
+          <button className="btn btn-secondary" style={{ padding: '8px 12px', fontSize: '0.85rem' }} onClick={handleSignOut}>
+            <LogOut size={16} /> Sign out
+          </button>
+        </div>
       </div>
     </div>
   );
 }
 
-function MainLayout({ hasPremium }) {
+function MainLayout() {
   return (
     <div className="app-container animate-fade-in">
-      <Sidebar hasPremium={hasPremium} />
+      <Sidebar />
       <div className="main-content">
         <Outlet />
       </div>
@@ -87,77 +108,80 @@ function MainLayout({ hasPremium }) {
   );
 }
 
-// General Auth Guard (Free or Premium). Redirects use `replace` so the Back
-// button skips the guarded URL instead of bouncing through the redirect again.
-function AuthRoute({ isAuthenticated, hasPremium }) {
-  if (!isAuthenticated) return <Navigate to="/onboarding" replace />;
-  return <MainLayout hasPremium={hasPremium} />;
+// General Auth Guard (Free or Premium). Waits for the saved session to be restored,
+// then sends signed-out visitors to sign in and brings them back afterwards.
+// Redirects use `replace` so the Back button skips the guarded URL.
+function AuthRoute() {
+  const { user, loading } = useAuth();
+  const location = useLocation();
+  if (loading) return <FullPageSpinner />;
+  if (!user) return <Navigate to="/signin" replace state={{ from: location }} />;
+  return <MainLayout />;
 }
 
 // Premium Only Guard (nested inside AuthRoute, so the user is already signed in)
-function PremiumRoute({ hasPremium }) {
+function PremiumRoute() {
+  const { hasPremium } = useAuth();
   if (!hasPremium) return <Navigate to="/premium" replace />;
   return <Outlet />;
 }
 
-const initialConnections = { google: false, apple: false, stripe: false, custom: false };
+// The paywall is full-screen, but still needs a signed-in user
+function PaywallRoute() {
+  const { user, loading } = useAuth();
+  const location = useLocation();
+  if (loading) return <FullPageSpinner />;
+  if (!user) return <Navigate to="/signin" replace state={{ from: location }} />;
+  return <PremiumPaywall />;
+}
+
+function SetupRequired() {
+  return (
+    <div className="flex-center" style={{ minHeight: '100vh', padding: '24px' }}>
+      <div className="glass-panel" style={{ maxWidth: '560px' }}>
+        <h2>Connect Supabase</h2>
+        <p className="input-label mt-4">
+          VibeAssist needs <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_PUBLISHABLE_KEY</code>.
+          Copy <code>.env.example</code> to <code>.env.local</code>, fill in both values, and restart <code>npm run dev</code>.
+        </p>
+      </div>
+    </div>
+  );
+}
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [hasPremium, setHasPremium] = useState(false);
-  const [profile, setProfile] = useState(null);
-  const [connections, setConnections] = useState(initialConnections);
-
-  const handleOnboardingComplete = (answers) => {
-    setProfile(answers);
-    setIsAuthenticated(true);
-  };
-
-  const toggleConnection = (platform) => {
-    setConnections(prev => ({ ...prev, [platform]: !prev[platform] }));
-  };
+  if (!supabase) return <SetupRequired />;
 
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<Landing />} />
+    <AuthProvider>
+      <Router>
+        <Routes>
+          <Route path="/" element={<Landing />} />
+          <Route path="/onboarding" element={<Onboarding />} />
+          <Route path="/signin" element={<SignIn />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/premium" element={<PaywallRoute />} />
 
-        <Route
-          path="/onboarding"
-          element={<Onboarding onComplete={handleOnboardingComplete} />}
-        />
+          <Route element={<AuthRoute />}>
+            {/* Free Tier Accessible Routes */}
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/publishing" element={<PublishingGuide />} />
+            <Route path="/newsletter" element={<Newsletter />} />
 
-        <Route
-          path="/premium"
-          element={
-            isAuthenticated ?
-            <PremiumPaywall
-              onSubscribe={() => setHasPremium(true)}
-              onSkip={() => setHasPremium(false)}
-            /> :
-            <Navigate to="/onboarding" replace />
-          }
-        />
-
-        <Route element={<AuthRoute isAuthenticated={isAuthenticated} hasPremium={hasPremium} />}>
-          {/* Free Tier Accessible Routes */}
-          <Route path="/dashboard" element={<Dashboard profile={profile} />} />
-          <Route path="/publishing" element={<PublishingGuide />} />
-          <Route path="/newsletter" element={<Newsletter />} />
-
-          {/* Premium Only Routes */}
-          <Route element={<PremiumRoute hasPremium={hasPremium} />}>
-            <Route path="/integrations" element={<Integrations connections={connections} onToggle={toggleConnection} />} />
-            <Route path="/ai-analyzer" element={<AIAnalyzer profile={profile} />} />
-            <Route path="/ads" element={<CampaignOverview />} />
-            <Route path="/orchestrator" element={<Orchestrator />} />
+            {/* Premium Only Routes */}
+            <Route element={<PremiumRoute />}>
+              <Route path="/integrations" element={<Integrations />} />
+              <Route path="/ai-analyzer" element={<AIAnalyzer />} />
+              <Route path="/ads" element={<CampaignOverview />} />
+              <Route path="/orchestrator" element={<Orchestrator />} />
+            </Route>
           </Route>
-        </Route>
 
-        {/* Fallback */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Router>
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Router>
+    </AuthProvider>
   );
 }
 
