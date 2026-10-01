@@ -1,0 +1,117 @@
+{
+  "axeVersion": "4.12.1",
+  "counts": {
+    "inapplicable": 37,
+    "incomplete": 1,
+    "passes": 25,
+    "violations": 0
+  },
+  "incomplete": [
+    {
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/color-contrast?application=axeAPI",
+      "id": "color-contrast",
+      "impact": "serious",
+      "nodeCount": 12,
+      "nodes": [
+        {
+          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node",
+          "html": "<tspan x=\"62\" dy=\"0.71em\">Mon</tspan>",
+          "target": [
+            "tspan[dy=\"0.71em\"][x=\"62\"]"
+          ]
+        },
+        {
+          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node",
+          "html": "<tspan x=\"225.66666666666666\" dy=\"0.71em\">Tue</tspan>",
+          "target": [
+            "tspan[x=\"225.66666666666666\"][dy=\"0.71em\"]"
+          ]
+        },
+        {
+          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node",
+          "html": "<tspan x=\"389.3333333333333\" dy=\"0.71em\">Wed</tspan>",
+          "target": [
+            "tspan[x=\"389.3333333333333\"][dy=\"0.71em\"]"
+          ]
+        },
+        {
+          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node",
+          "html": "<tspan x=\"553\" dy=\"0.71em\">Thu</tspan>",
+          "target": [
+            "tspan[x=\"553\"][dy=\"0.71em\"]"
+          ]
+        },
+        {
+          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node",
+          "html": "<tspan x=\"716.6666666666666\" dy=\"0.71em\">Fri</tspan>",
+          "target": [
+            "tspan[x=\"716.6666666666666\"][dy=\"0.71em\"]"
+          ]
+        },
+        {
+          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node",
+          "html": "<tspan x=\"880.3333333333333\" dy=\"0.71em\">Sat</tspan>",
+          "target": [
+            "tspan[x=\"880.3333333333333\"][dy=\"0.71em\"]"
+          ]
+        },
+        {
+          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node",
+          "html": "<tspan x=\"1042.28125\" dy=\"0.71em\">Sun</tspan>",
+          "target": [
+            "tspan[x=\"1042.28125\"][dy=\"0.71em\"]"
+          ]
+        },
+        {
+          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node",
+          "html": "<tspan x=\"54\" dy=\"0.355em\">$0</tspan>",
+          "target": [
+            "text[y=\"270\"] > tspan[dy=\"0.355em\"][x=\"54\"]"
+          ]
+        },
+        {
+          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node",
+          "html": "<tspan x=\"54\" dy=\"0.355em\">$1,000</tspan>",
+          "target": [
+            "text[y=\"207.5\"] > tspan[dy=\"0.355em\"][x=\"54\"]"
+          ]
+        },
+        {
+          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node",
+          "html": "<tspan x=\"54\" dy=\"0.355em\">$2,000</tspan>",
+          "target": [
+            "text[y=\"145\"] > tspan[dy=\"0.355em\"][x=\"54\"]"
+          ]
+        }
+      ],
+      "tags": [
+        "cat.color",
+        "wcag2aa",
+        "wcag143",
+        "TTv5",
+        "TT13.c",
+        "EN-301-549",
+        "EN-9.1.4.3",
+        "ACT",
+        "RGAAv4",
+        "RGAA-3.2.1"
+      ]
+    }
+  ],
+  "lifecycle": {
+    "effectiveLaunch": {
+      "browserLaunched": true,
+      "engine": "chrome",
+      "launchHash": 11677035664275012000
+    },
+    "launched": false,
+    "relaunchedBrowser": false,
+    "restartedBackground": false,
+    "restoreStatus": "not_configured",
+    "reused": true,
+    "saveStatus": "not_attempted"
+  },
+  "url": "http://127.0.0.1:5173/dashboard",
+  "violations": []
+}
