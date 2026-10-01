@@ -13,13 +13,36 @@ export const addDays = (date, days) => {
 
 const shortLabel = (date) => new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(date);
 
+// '2026-09-30' -> 'Sep 30' (parsed as a local calendar day, not UTC midnight)
+export const formatDay = (iso, withYear = false) => {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', ...(withYear ? { year: 'numeric' } : {}) }).format(new Date(y, m - 1, d));
+};
+
+// Whole calendar days between an ISO day and today
+export const daysSince = (iso) => {
+  const [y, m, d] = iso.split('-').map(Number);
+  const then = new Date(y, m - 1, d);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return Math.round((today - then) / 864e5);
+};
+
+export const relativeDay = (iso) => {
+  const n = daysSince(iso);
+  if (n <= 0) return 'today';
+  if (n === 1) return 'yesterday';
+  return `${n} days ago`;
+};
+
 export const METRIC_COLUMNS = 'day, source, revenue, fees, ad_spend, organic_downloads, paid_downloads, purchases, active_users';
+export const SOURCE_LABELS = { manual: 'Entered by hand', sample: 'Sample data', stripe: 'Stripe', custom_api: 'Custom API' };
 
 // All sources for the last `days` days; RLS limits the rows to the signed-in user
 export function fetchMetrics(days) {
   return supabase
     .from('daily_metrics')
-    .select(METRIC_COLUMNS)
+    .select(`${METRIC_COLUMNS}, updated_at`)
     .gte('day', isoDay(addDays(new Date(), -(days - 1))))
     .order('day');
 }
@@ -66,7 +89,14 @@ export function summarize(rows, periodDays) {
   for (let offset = periodDays - 1; offset >= 0; offset--) {
     const date = addDays(today, -offset);
     const t = byDay.get(isoDay(date)) ?? emptyDay();
-    chartData.push({ label: shortLabel(date), ...t, profit: t.revenue - t.fees - t.adSpend });
+    chartData.push({
+      day: isoDay(date),
+      label: shortLabel(date),
+      ...t,
+      downloads: t.organicDownloads + t.paidDownloads,
+      profit: t.revenue - t.fees - t.adSpend,
+      hasData: byDay.has(isoDay(date)),
+    });
   }
 
   const current = totalsBetween(byDay, isoDay(addDays(today, -(periodDays - 1))), isoDay(today));

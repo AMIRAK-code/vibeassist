@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, Navigate, useLocation } from 'react-router-dom';
-import { Code, LogIn } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/auth';
+import BrandMark from '../components/landing/BrandMark';
+import Notice from '../components/ui/Notice';
 
 const SIGN_IN_ERRORS = {
-  invalid_credentials: "That email and password don't match an account.",
-  email_not_confirmed: 'Confirm your email first. Check your inbox for the link we sent when you signed up.',
+  invalid_credentials: "That email and password don't match an account. Check both, or reset your password below.",
+  email_not_confirmed: 'Confirm your email first: open the link we sent when you signed up, then sign in here.',
 };
 
 export default function SignIn() {
@@ -19,85 +20,71 @@ export default function SignIn() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState('');
+
+  useEffect(() => {
+    document.title = 'Sign in · VibeAssist';
+  }, []);
 
   if (!loading && user) return <Navigate to={from} replace />;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (busy) return;
     setError('');
     setNotice('');
-    setBusy(true);
+    setBusy('signin');
     const { error: signInError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
     // On success the redirect above takes over once the account has loaded
     if (signInError) {
-      setBusy(false);
-      setError(SIGN_IN_ERRORS[signInError.code] ?? signInError.message);
+      setBusy('');
+      setError(SIGN_IN_ERRORS[signInError.code] ?? `${signInError.message} Try again in a moment.`);
     }
   };
 
   const handleForgotPassword = async () => {
     setError('');
     setNotice('');
-    if (!email.trim()) {
-      setError('Enter your email above, then choose "Forgot password?" again.');
+    if (!/^\S+@\S+\.\S+$/.test(email.trim())) {
+      setError('Enter your email above first, then choose “Forgot password?”.');
       return;
     }
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
-    if (resetError) setError(resetError.message);
-    else setNotice('If that email has an account, a reset link is on its way.');
+    setBusy('reset');
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: `${window.location.origin}/reset-password` });
+    setBusy('');
+    if (resetError) setError(`${resetError.message} Try again in a minute.`);
+    else setNotice(`If ${email.trim()} has an account, a reset link is on its way. It works once and expires after a while.`);
   };
 
   return (
-    <div className="flex-center animate-fade-in" style={{ minHeight: '100vh', padding: '24px' }}>
-      <form className="glass-panel" style={{ maxWidth: '440px', width: '100%' }} onSubmit={handleSubmit}>
-        <div className="text-center mb-4">
-          <Code className="text-gradient" size={48} style={{ margin: '0 auto 16px' }} />
-          <h2>Welcome back</h2>
-          <p className="input-label mt-4">Sign in to see your numbers.</p>
+    <main className="auth-page">
+      <form className="card card--raised auth-card" onSubmit={handleSubmit} noValidate>
+        <Link to="/" className="auth-brand"><BrandMark /> VibeAssist</Link>
+        <h1>Sign in</h1>
+        <p className="lead">Pick up where you left off.</p>
+
+        <div className="field">
+          <label className="field-label" htmlFor="signin-email">Email</label>
+          <input id="signin-email" type="email" className="input-field" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+        </div>
+        <div className="field">
+          <label className="field-label" htmlFor="signin-password">Password</label>
+          <input id="signin-password" type="password" className="input-field" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
         </div>
 
-        <div className="input-group">
-          <label className="input-label" htmlFor="signin-email">Email address</label>
-          <input
-            id="signin-email"
-            type="email"
-            className="input-field"
-            autoComplete="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </div>
-        <div className="input-group">
-          <label className="input-label" htmlFor="signin-password">Password</label>
-          <input
-            id="signin-password"
-            type="password"
-            className="input-field"
-            autoComplete="current-password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </div>
+        {error && <div style={{ marginBottom: 14 }}><Notice tone="error">{error}</Notice></div>}
+        {notice && <div style={{ marginBottom: 14 }}><Notice tone="success">{notice}</Notice></div>}
 
-        {error && <p role="alert" style={{ color: '#d93025', fontSize: '0.9rem', marginBottom: '12px' }}>{error}</p>}
-        {notice && <p role="status" style={{ color: 'var(--accent-1)', fontSize: '0.9rem', marginBottom: '12px' }}>{notice}</p>}
-
-        <button type="submit" className="btn btn-primary w-full" disabled={busy}>
-          {busy ? 'Signing in…' : <><LogIn size={18} /> Sign in</>}
+        <button type="submit" className="btn btn-primary w-full" disabled={Boolean(busy)} aria-busy={busy === 'signin'}>
+          {busy === 'signin' ? <><span className="spinner spinner--light" /> Signing in…</> : 'Sign in'}
         </button>
-
-        <div className="flex-between mt-4" style={{ fontSize: '0.9rem' }}>
-          <button type="button" className="btn btn-secondary" style={{ padding: '8px 12px', fontSize: '0.85rem' }} onClick={handleForgotPassword}>
-            Forgot password?
+        <div className="flex-between" style={{ marginTop: 12, flexWrap: 'wrap', gap: 8 }}>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={handleForgotPassword} disabled={Boolean(busy)}>
+            {busy === 'reset' ? 'Sending…' : 'Forgot password?'}
           </button>
-          <Link to="/onboarding" style={{ color: 'var(--accent-1)' }}>Create an account</Link>
+          <Link to="/onboarding" style={{ fontSize: 14, fontWeight: 600 }}>Create an account</Link>
         </div>
       </form>
-    </div>
+    </main>
   );
 }

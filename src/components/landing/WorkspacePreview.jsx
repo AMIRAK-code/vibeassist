@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  LayoutDashboard, Plug, Megaphone, Sparkles, Plus, Search, ListChecks, BarChart3, StickyNote,
+  LayoutDashboard, Plug, Megaphone, PenLine, Plus, Search, ListChecks, BarChart3, StickyNote,
   ChevronDown, TrendingUp, Download, RefreshCw, MoreHorizontal,
 } from 'lucide-react';
 import BrandMark from './BrandMark';
@@ -10,9 +10,9 @@ import BrandMark from './BrandMark';
 // technology as a single image with a description.
 const SIDEBAR = [
   { icon: LayoutDashboard, label: 'Overview', active: true },
-  { icon: Plug, label: 'Integrations' },
-  { icon: Megaphone, label: 'Ad Manager' },
-  { icon: Sparkles, label: 'AI Advisor' },
+  { icon: ListChecks, label: 'Plan' },
+  { icon: Megaphone, label: 'Campaigns' },
+  { icon: Plug, label: 'Data sources' },
 ];
 
 const TABS = [
@@ -34,7 +34,7 @@ const NOTES = [
 ];
 
 const DESCRIPTION =
-  'Illustration of the VibeAssist workspace: a sidebar with Overview, Integrations, Ad Manager and AI Advisor, ' +
+  'Illustration of the VibeAssist workspace: a sidebar with Overview, Plan, Campaigns and Data sources, ' +
   "and this week's plan with three next steps drawn from your revenue, ads and launch guidance.";
 
 export default function WorkspacePreview({ id }) {
@@ -103,7 +103,7 @@ export default function WorkspacePreview({ id }) {
               <span className="ci-ws-tool"><RefreshCw /></span>
               <span className="ci-ws-tool"><Plus /></span>
               <span className="ci-ws-tool-rule ci-ws-tool-rule--action" />
-              <span className="ci-ws-action"><Sparkles /> Ask the advisor</span>
+              <span className="ci-ws-action"><PenLine /> Write a plan</span>
               <span className="ci-ws-tool ci-ws-more"><MoreHorizontal /></span>
             </div>
           </div>
