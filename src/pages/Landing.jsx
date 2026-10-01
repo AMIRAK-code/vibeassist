@@ -1,9 +1,11 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sparkles, Code, PlayCircle, ShieldCheck, TrendingUp } from 'lucide-react';
+import { useAuth } from '../context/auth';
 
 export default function Landing() {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   return (
     <div className="animate-fade-in" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -15,8 +17,14 @@ export default function Landing() {
           <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>VibeAssist</h2>
         </div>
         <div className="flex-center gap-4">
-          <button className="btn btn-secondary" onClick={() => navigate('/onboarding')}>Sign In</button>
-          <button className="btn btn-primary" onClick={() => navigate('/onboarding')}>Get Started <Sparkles size={16} /></button>
+          {user ? (
+            <button className="btn btn-primary" onClick={() => navigate('/dashboard')}>Open Dashboard <Sparkles size={16} /></button>
+          ) : (
+            <>
+              <button className="btn btn-secondary" onClick={() => navigate('/signin')}>Sign In</button>
+              <button className="btn btn-primary" onClick={() => navigate('/onboarding')}>Get Started <Sparkles size={16} /></button>
+            </>
+          )}
         </div>
       </nav>
 

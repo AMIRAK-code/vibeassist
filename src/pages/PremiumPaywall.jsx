@@ -1,37 +1,46 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sparkles, CheckCircle2, X, Zap } from 'lucide-react';
+import { friendlyError, supabase } from '../lib/supabase';
+import { useAuth } from '../context/auth';
 
-export default function PremiumPaywall({ onSubscribe, onSkip }) {
+export default function PremiumPaywall() {
   const navigate = useNavigate();
+  const { refreshAccount } = useAuth();
   const [billingCycle, setBillingCycle] = useState('monthly');
+  const [saving, setSaving] = useState('');
+  const [error, setError] = useState('');
 
-  const handleSubscribe = () => {
-    // In production, this would trigger Stripe checkout
-    alert('Redirecting to Stripe Checkout...');
-    onSubscribe();
-    navigate('/dashboard');
+  // Saves the plan to the account through the database's choose_plan function.
+  // Demo checkout: no payment is taken until Stripe Checkout is wired in.
+  const choosePlan = async (plan, cycle) => {
+    setSaving(plan === 'free' ? 'free' : cycle);
+    setError('');
+    const { error: planError } = await supabase.rpc('choose_plan', { p_plan: plan, p_billing_cycle: cycle });
+    if (planError) {
+      setSaving('');
+      setError(friendlyError(planError, 'Could not save your plan. Try again.'));
+      return;
+    }
+    await refreshAccount();
+    navigate('/dashboard', { replace: true });
   };
 
-  const handlePromoSubscribe = () => {
-    alert('Redirecting to Stripe Checkout for $12.99 Promo...');
-    onSubscribe();
-    navigate('/dashboard');
-  };
-
-  const handleDecline = () => {
-    // Continue as free tier
-    onSkip();
-    navigate('/dashboard');
-  };
+  const handleSubscribe = () => choosePlan('premium', billingCycle);
+  const handlePromoSubscribe = () => choosePlan('premium', 'promo');
+  // Continue as free tier
+  const handleDecline = () => choosePlan('free', null);
+  // Closing the paywall keeps whatever plan the account already has
+  const handleClose = () => navigate('/dashboard', { replace: true });
 
   return (
     <div className="flex-center animate-fade-in" style={{ minHeight: '100vh', padding: '24px', background: 'var(--bg-color)' }}>
       <div className="glass-panel" style={{ maxWidth: '800px', width: '100%', padding: '40px', position: 'relative' }}>
         
-        {/* Close Button = Continue as Free */}
-        <button 
-          onClick={handleDecline}
+        {/* Close Button = keep the current plan */}
+        <button
+          onClick={handleClose}
+          aria-label="Close and go to the dashboard"
           style={{ position: 'absolute', top: '24px', right: '24px', background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
         >
           <X size={24} />
@@ -52,8 +61,8 @@ export default function PremiumPaywall({ onSubscribe, onSkip }) {
               <p className="input-label" style={{ fontSize: '0.9rem' }}>$12.99 for a 2-month trial of every premium service.</p>
             </div>
           </div>
-          <button className="btn" style={{ background: 'var(--accent-2)', color: '#000' }} onClick={handlePromoSubscribe}>
-            Claim Promo
+          <button className="btn" style={{ background: 'var(--accent-2)', color: '#000' }} onClick={handlePromoSubscribe} disabled={Boolean(saving)}>
+            {saving === 'promo' ? 'Saving…' : 'Claim Promo'}
           </button>
         </div>
 
@@ -85,7 +94,7 @@ export default function PremiumPaywall({ onSubscribe, onSkip }) {
               <li className="flex-center" style={{ justifyContent: 'flex-start', gap: '8px' }}><CheckCircle2 size={16} /> Vibe-coding Newsletter</li>
               <li className="flex-center" style={{ justifyContent: 'flex-start', gap: '8px' }}><CheckCircle2 size={16} /> Basic Legal Guidelines</li>
             </ul>
-            <button className="btn btn-secondary w-full mt-auto" onClick={handleDecline}>Continue Free</button>
+            <button className="btn btn-secondary w-full mt-auto" onClick={handleDecline} disabled={Boolean(saving)}>{saving === 'free' ? 'Saving…' : 'Continue Free'}</button>
           </div>
 
           {/* Premium Tier */}
@@ -95,7 +104,7 @@ export default function PremiumPaywall({ onSubscribe, onSkip }) {
               ${billingCycle === 'monthly' ? '19.99' : '15.99'}
               <span style={{ fontSize: '1rem', color: 'var(--text-secondary)' }}>/mo</span>
             </h2>
-            {billingCycle === 'yearly' && <p style={{ fontSize: '0.8rem', color: 'var(--accent-2)', marginTop: '4px' }}>Billed annually</p>}
+            {billingCycle === 'yearly' && <p style={{ fontSize: '0.8rem', color: 'var(--accent-1)', marginTop: '4px' }}>$191.88 billed once a year</p>}
             
             <ul className="input-label flex-column gap-4 mt-4 mb-4" style={{ listStyle: 'none', color: 'var(--text-primary)' }}>
               <li className="flex-center" style={{ justifyContent: 'flex-start', gap: '8px' }}><CheckCircle2 className="text-gradient" size={16} /> Advanced AI Business Analyzer</li>
@@ -104,9 +113,14 @@ export default function PremiumPaywall({ onSubscribe, onSkip }) {
               <li className="flex-center" style={{ justifyContent: 'flex-start', gap: '8px' }}><CheckCircle2 className="text-gradient" size={16} /> Automated Legal Document Generator</li>
             </ul>
             
-            <button className="btn btn-primary w-full mt-auto" onClick={handleSubscribe}>Upgrade Now</button>
+            <button className="btn btn-primary w-full mt-auto" onClick={handleSubscribe} disabled={Boolean(saving)}>{saving === billingCycle ? 'Saving…' : 'Upgrade Now'}</button>
           </div>
         </div>
+
+        {error && <p role="alert" className="text-center mt-4" style={{ color: '#d93025' }}>{error}</p>}
+        <p className="input-label text-center mt-4" style={{ fontSize: '0.8rem' }}>
+          Demo checkout: choosing a plan saves it to your account, but no payment is taken yet.
+        </p>
 
       </div>
     </div>
