@@ -1,0 +1,463 @@
+[
+  {
+    "name": "Onboarding validates and preserves Back/Next choices",
+    "passed": true
+  },
+  {
+    "name": "Skip opens the empty overview without fake data",
+    "passed": true
+  },
+  {
+    "name": "Metric switches, selected periods, cards and table reconcile",
+    "passed": true
+  },
+  {
+    "name": "Workspace survives a reload",
+    "passed": true
+  },
+  {
+    "name": "Drawer traps focus, closes with Escape, restores focus and scrolling",
+    "passed": true
+  },
+  {
+    "name": "Drawer navigation closes and marks the active destination",
+    "passed": true
+  },
+  {
+    "name": "Open mobile drawer accessibility scan",
+    "passed": true,
+    "violations": 0
+  },
+  {
+    "name": "Connection preferences persist without connecting an account",
+    "passed": true
+  },
+  {
+    "name": "/ at 320px",
+    "passed": true,
+    "heading": "Your apps.A clearer next step.",
+    "overlay": false,
+    "scroll": 320,
+    "width": 320
+  },
+  {
+    "name": "/onboarding at 320px",
+    "passed": true,
+    "heading": "Start with your project.",
+    "overlay": false,
+    "scroll": 320,
+    "width": 320
+  },
+  {
+    "name": "/dashboard at 320px",
+    "passed": true,
+    "heading": "Overview",
+    "mainTop": 69.390625,
+    "overlay": false,
+    "scroll": 320,
+    "width": 320
+  },
+  {
+    "name": "/integrations at 320px",
+    "passed": true,
+    "heading": "Connections",
+    "mainTop": 69.390625,
+    "overlay": false,
+    "scroll": 320,
+    "width": 320
+  },
+  {
+    "name": "/ai-analyzer at 320px",
+    "passed": true,
+    "heading": "Recommendations",
+    "mainTop": 69.390625,
+    "overlay": false,
+    "scroll": 320,
+    "width": 320
+  },
+  {
+    "name": "/publishing at 320px",
+    "passed": true,
+    "heading": "Launch checklist",
+    "mainTop": 69.390625,
+    "overlay": false,
+    "scroll": 320,
+    "width": 320
+  },
+  {
+    "name": "/newsletter at 320px",
+    "passed": true,
+    "heading": "News & learning",
+    "mainTop": 69.390625,
+    "overlay": false,
+    "scroll": 320,
+    "width": 320
+  },
+  {
+    "name": "/ads at 320px",
+    "passed": true,
+    "heading": "Advertising",
+    "mainTop": 69.390625,
+    "overlay": false,
+    "scroll": 320,
+    "width": 320
+  },
+  {
+    "name": "/orchestrator at 320px",
+    "passed": true,
+    "heading": "Developer tools",
+    "mainTop": 69.390625,
+    "overlay": false,
+    "scroll": 320,
+    "width": 320
+  },
+  {
+    "name": "/premium at 320px",
+    "passed": true,
+    "heading": "Explore the preview.",
+    "overlay": false,
+    "scroll": 320,
+    "width": 320
+  },
+  {
+    "name": "Onboarding source selection at 320px",
+    "passed": true
+  },
+  {
+    "name": "/ at 390px",
+    "passed": true,
+    "heading": "Your apps.A clearer next step.",
+    "overlay": false,
+    "scroll": 390,
+    "width": 390
+  },
+  {
+    "name": "/onboarding at 390px",
+    "passed": true,
+    "heading": "Start with your project.",
+    "overlay": false,
+    "scroll": 390,
+    "width": 390
+  },
+  {
+    "name": "/dashboard at 390px",
+    "passed": true,
+    "heading": "Overview",
+    "mainTop": 69.390625,
+    "overlay": false,
+    "scroll": 390,
+    "width": 390
+  },
+  {
+    "name": "/integrations at 390px",
+    "passed": true,
+    "heading": "Connections",
+    "mainTop": 69.390625,
+    "overlay": false,
+    "scroll": 390,
+    "width": 390
+  },
+  {
+    "name": "/ai-analyzer at 390px",
+    "passed": true,
+    "heading": "Recommendations",
+    "mainTop": 69.390625,
+    "overlay": false,
+    "scroll": 390,
+    "width": 390
+  },
+  {
+    "name": "/publishing at 390px",
+    "passed": true,
+    "heading": "Launch checklist",
+    "mainTop": 69.390625,
+    "overlay": false,
+    "scroll": 390,
+    "width": 390
+  },
+  {
+    "name": "/newsletter at 390px",
+    "passed": true,
+    "heading": "News & learning",
+    "mainTop": 69.390625,
+    "overlay": false,
+    "scroll": 390,
+    "width": 390
+  },
+  {
+    "name": "/ads at 390px",
+    "passed": true,
+    "heading": "Advertising",
+    "mainTop": 69.390625,
+    "overlay": false,
+    "scroll": 390,
+    "width": 390
+  },
+  {
+    "name": "/orchestrator at 390px",
+    "passed": true,
+    "heading": "Developer tools",
+    "mainTop": 69.390625,
+    "overlay": false,
+    "scroll": 390,
+    "width": 390
+  },
+  {
+    "name": "/premium at 390px",
+    "passed": true,
+    "heading": "Explore the preview.",
+    "overlay": false,
+    "scroll": 390,
+    "width": 390
+  },
+  {
+    "name": "Onboarding source selection at 390px",
+    "passed": true
+  },
+  {
+    "name": "/ at 768px",
+    "passed": true,
+    "heading": "Your apps.A clearer next step.",
+    "overlay": false,
+    "scroll": 768,
+    "width": 768
+  },
+  {
+    "name": "/onboarding at 768px",
+    "passed": true,
+    "heading": "Start with your project.",
+    "overlay": false,
+    "scroll": 768,
+    "width": 768
+  },
+  {
+    "name": "/dashboard at 768px",
+    "passed": true,
+    "heading": "Overview",
+    "mainTop": 69.390625,
+    "overlay": false,
+    "scroll": 768,
+    "width": 768
+  },
+  {
+    "name": "/integrations at 768px",
+    "passed": true,
+    "heading": "Connections",
+    "mainTop": 69.390625,
+    "overlay": false,
+    "scroll": 768,
+    "width": 768
+  },
+  {
+    "name": "/ai-analyzer at 768px",
+    "passed": true,
+    "heading": "Recommendations",
+    "mainTop": 69.390625,
+    "overlay": false,
+    "scroll": 768,
+    "width": 768
+  },
+  {
+    "name": "/publishing at 768px",
+    "passed": true,
+    "heading": "Launch checklist",
+    "mainTop": 69.390625,
+    "overlay": false,
+    "scroll": 768,
+    "width": 768
+  },
+  {
+    "name": "/newsletter at 768px",
+    "passed": true,
+    "heading": "News & learning",
+    "mainTop": 69.390625,
+    "overlay": false,
+    "scroll": 768,
+    "width": 768
+  },
+  {
+    "name": "/ads at 768px",
+    "passed": true,
+    "heading": "Advertising",
+    "mainTop": 69.390625,
+    "overlay": false,
+    "scroll": 768,
+    "width": 768
+  },
+  {
+    "name": "/orchestrator at 768px",
+    "passed": true,
+    "heading": "Developer tools",
+    "mainTop": 69.390625,
+    "overlay": false,
+    "scroll": 768,
+    "width": 768
+  },
+  {
+    "name": "/premium at 768px",
+    "passed": true,
+    "heading": "Explore the preview.",
+    "overlay": false,
+    "scroll": 768,
+    "width": 768
+  },
+  {
+    "name": "Onboarding source selection at 768px",
+    "passed": true
+  },
+  {
+    "name": "/ at 1440px",
+    "passed": true,
+    "heading": "Your apps.A clearer next step.",
+    "overlay": false,
+    "scroll": 1440,
+    "width": 1440
+  },
+  {
+    "name": "/onboarding at 1440px",
+    "passed": true,
+    "heading": "Start with your project.",
+    "overlay": false,
+    "scroll": 1440,
+    "width": 1440
+  },
+  {
+    "name": "/dashboard at 1440px",
+    "passed": true,
+    "heading": "Overview",
+    "mainTop": 0,
+    "overlay": false,
+    "scroll": 1440,
+    "width": 1440
+  },
+  {
+    "name": "/integrations at 1440px",
+    "passed": true,
+    "heading": "Connections",
+    "mainTop": 0,
+    "overlay": false,
+    "scroll": 1440,
+    "width": 1440
+  },
+  {
+    "name": "/ai-analyzer at 1440px",
+    "passed": true,
+    "heading": "Recommendations",
+    "mainTop": 0,
+    "overlay": false,
+    "scroll": 1440,
+    "width": 1440
+  },
+  {
+    "name": "/publishing at 1440px",
+    "passed": true,
+    "heading": "Launch checklist",
+    "mainTop": 0,
+    "overlay": false,
+    "scroll": 1440,
+    "width": 1440
+  },
+  {
+    "name": "/newsletter at 1440px",
+    "passed": true,
+    "heading": "News & learning",
+    "mainTop": 0,
+    "overlay": false,
+    "scroll": 1440,
+    "width": 1440
+  },
+  {
+    "name": "/ads at 1440px",
+    "passed": true,
+    "heading": "Advertising",
+    "mainTop": 0,
+    "overlay": false,
+    "scroll": 1440,
+    "width": 1440
+  },
+  {
+    "name": "/orchestrator at 1440px",
+    "passed": true,
+    "heading": "Developer tools",
+    "mainTop": 0,
+    "overlay": false,
+    "scroll": 1440,
+    "width": 1440
+  },
+  {
+    "name": "/premium at 1440px",
+    "passed": true,
+    "heading": "Explore the preview.",
+    "overlay": false,
+    "scroll": 1440,
+    "width": 1440
+  },
+  {
+    "name": "Onboarding source selection at 1440px",
+    "passed": true
+  },
+  {
+    "name": "Accessibility scan /",
+    "passed": true,
+    "violations": 0,
+    "manualReview": 1
+  },
+  {
+    "name": "Accessibility scan /onboarding",
+    "passed": true,
+    "violations": 0,
+    "manualReview": 0
+  },
+  {
+    "name": "Accessibility scan /dashboard",
+    "passed": true,
+    "violations": 0,
+    "manualReview": 1
+  },
+  {
+    "name": "Accessibility scan /integrations",
+    "passed": true,
+    "violations": 0,
+    "manualReview": 0
+  },
+  {
+    "name": "Accessibility scan /ai-analyzer",
+    "passed": true,
+    "violations": 0,
+    "manualReview": 0
+  },
+  {
+    "name": "Accessibility scan /publishing",
+    "passed": true,
+    "violations": 0,
+    "manualReview": 0
+  },
+  {
+    "name": "Accessibility scan /newsletter",
+    "passed": true,
+    "violations": 0,
+    "manualReview": 0
+  },
+  {
+    "name": "Accessibility scan /ads",
+    "passed": true,
+    "violations": 0,
+    "manualReview": 0
+  },
+  {
+    "name": "Accessibility scan /orchestrator",
+    "passed": true,
+    "violations": 0,
+    "manualReview": 0
+  },
+  {
+    "name": "Accessibility scan /premium",
+    "passed": true,
+    "violations": 0,
+    "manualReview": 0
+  },
+  {
+    "name": "Reduced motion disables transitions",
+    "passed": true
+  }
+]
