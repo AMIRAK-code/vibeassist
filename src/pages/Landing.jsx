@@ -79,12 +79,12 @@ export default function Landing() {
         <main>
           <section className="ci-hero" aria-labelledby="hero-title">
             <div className="ci-hero-copy">
-              <p className="ci-eyebrow">A space for your next idea</p>
+              <p className="ci-eyebrow">For indie app makers</p>
               <h1 id="hero-title" className="ci-display">
                 <span>Less friction<span className="ci-stop">.</span></span>{' '}
                 <span>More flow<span className="ci-stop">.</span></span>
               </h1>
-              <p className="ci-lede">Give your ideas room to take shape.</p>
+              <p className="ci-lede">See what your apps earn, and what to do next.</p>
               <div className="ci-actions">
                 <Link to={exploreTo} className="ci-button ci-button--primary">
                   Explore the workspace <ArrowRight aria-hidden="true" />

@@ -15,10 +15,15 @@ export function friendlyError(error, fallback = 'Something went wrong. Try again
   return error.message || fallback;
 }
 
-// Calls an Edge Function and returns its JSON body, even for error statuses
-export async function callFunction(name, body) {
-  const { data, error } = await supabase.functions.invoke(name, { body });
+// Calls an Edge Function and returns its JSON body, even for error statuses.
+// Pass an AbortSignal to stop waiting; the result is then { aborted: true }.
+export async function callFunction(name, body, { signal } = {}) {
+  const { data, error } = await supabase.functions.invoke(name, { body, signal });
+  if (signal?.aborted) return { aborted: true, data: null, status: 0 };
   if (!error) return { data, status: 200 };
+  if (error.name === 'FunctionsFetchError') {
+    return { data: { error: "Couldn't reach the server. Check your connection and try again." }, status: 0 };
+  }
   const response = error.context;
   if (response && typeof response.json === 'function') {
     try {
