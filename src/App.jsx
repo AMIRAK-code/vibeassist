@@ -8,7 +8,7 @@ import PremiumPaywall from './pages/PremiumPaywall';
 import Integrations from './pages/Integrations';
 import AIAnalyzer from './pages/AIAnalyzer';
 import PublishingGuide from './pages/PublishingGuide';
-import AdManager from './pages/AdManager';
+import CampaignOverview from './pages/CampaignOverview';
 import Newsletter from './pages/Newsletter';
 import Orchestrator from './pages/Orchestrator';
 
@@ -134,7 +134,7 @@ function App() {
         {/* Premium Only Routes */}
         <Route path="/integrations" element={<PremiumRoute><Integrations /></PremiumRoute>} />
         <Route path="/ai-analyzer" element={<PremiumRoute><AIAnalyzer /></PremiumRoute>} />
-        <Route path="/ads" element={<PremiumRoute><AdManager /></PremiumRoute>} />
+        <Route path="/ads" element={<PremiumRoute><CampaignOverview /></PremiumRoute>} />
         <Route path="/orchestrator" element={<PremiumRoute><Orchestrator /></PremiumRoute>} />
         
         {/* Fallback */}
