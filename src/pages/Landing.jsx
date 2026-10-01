@@ -1,103 +1,123 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Sparkles, Code, PlayCircle, ShieldCheck, TrendingUp } from 'lucide-react';
+import React, { useEffect, useId, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { ArrowRight, ChevronRight, Menu, X } from 'lucide-react';
 import { useAuth } from '../context/auth';
+import BrandMark from '../components/landing/BrandMark';
+import WorkspacePreview from '../components/landing/WorkspacePreview';
+import sculpture from '../assets/landing/clay-sculpture.webp';
+import '../styles/tokens.css';
+import './Landing.css';
 
-export default function Landing() {
-  const navigate = useNavigate();
-  const { user } = useAuth();
+function SiteHeader({ exploreTo, signedIn }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuId = useId();
+  const menuRef = useRef(null);
+
+  // Close the mobile menu with Escape or a click outside it
+  useEffect(() => {
+    if (!menuOpen) return undefined;
+    const onKey = (e) => e.key === 'Escape' && setMenuOpen(false);
+    const onClick = (e) => menuRef.current && !menuRef.current.contains(e.target) && setMenuOpen(false);
+    document.addEventListener('keydown', onKey);
+    document.addEventListener('click', onClick);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('click', onClick);
+    };
+  }, [menuOpen]);
+
+  const close = () => setMenuOpen(false);
+  const links = (
+    <>
+      <a href="#product" onClick={close}>Product</a>
+      <a href="#how-it-works" onClick={close}>How it works</a>
+      {signedIn ? <Link to="/dashboard" onClick={close}>Dashboard</Link> : <Link to="/signin" onClick={close}>Sign in</Link>}
+    </>
+  );
 
   return (
-    <div className="animate-fade-in" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      
-      {/* Navbar */}
-      <nav style={{ padding: '24px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--panel-border)' }}>
-        <div className="flex-center gap-4">
-          <Code className="text-gradient" size={32} />
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>VibeAssist</h2>
-        </div>
-        <div className="flex-center gap-4">
-          {user ? (
-            <button className="btn btn-primary" onClick={() => navigate('/dashboard')}>Open Dashboard <Sparkles size={16} /></button>
-          ) : (
-            <>
-              <button className="btn btn-secondary" onClick={() => navigate('/signin')}>Sign In</button>
-              <button className="btn btn-primary" onClick={() => navigate('/onboarding')}>Get Started <Sparkles size={16} /></button>
-            </>
-          )}
-        </div>
-      </nav>
+    <header className="ci-header">
+      <Link to="/" className="ci-brand" aria-label="VibeAssist home">
+        <BrandMark className="ci-brand-mark" />
+        <span className="ci-brand-word">VibeAssist</span>
+      </Link>
 
-      {/* Hero Section */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '80px 24px', textAlign: 'center' }}>
-        <div style={{ background: 'rgba(255, 46, 147, 0.1)', color: 'var(--accent-1)', padding: '8px 16px', borderRadius: '20px', fontSize: '0.9rem', marginBottom: '24px', fontWeight: 'bold' }}>
-          ✨ The #1 Platform for Indie Hackers & Vibe Coders
-        </div>
-        
-        <h1 style={{ fontSize: '4.5rem', lineHeight: '1.1', maxWidth: '800px', marginBottom: '24px' }}>
-          Build your empire.<br />
-          <span className="text-gradient">Maximize your profits.</span>
-        </h1>
-        
-        <p className="input-label" style={{ fontSize: '1.2rem', maxWidth: '600px', marginBottom: '40px', lineHeight: '1.6' }}>
-          Connect all your developer accounts (Apple, Google, Stripe). Let our AI analyze your business plan, optimize your ads, and handle legal compliance automatically.
-        </p>
-
-        <div className="flex-center gap-4">
-          <button className="btn btn-primary" style={{ padding: '16px 32px', fontSize: '1.1rem' }} onClick={() => navigate('/onboarding')}>
-            Start Building Now
+      <nav className="ci-nav" aria-label="Main">
+        <div className="ci-nav-links">{links}</div>
+        <Link to={exploreTo} className="ci-button ci-button--compact">Explore</Link>
+        <div className="ci-menu" ref={menuRef}>
+          <button
+            type="button"
+            className="ci-menu-toggle"
+            aria-expanded={menuOpen}
+            aria-controls={menuId}
+            onClick={() => setMenuOpen((open) => !open)}
+          >
+            {menuOpen ? <X aria-hidden="true" /> : <Menu aria-hidden="true" />}
+            <span className="ci-visually-hidden">{menuOpen ? 'Close menu' : 'Open menu'}</span>
           </button>
-          <button className="btn btn-secondary" style={{ padding: '16px 32px', fontSize: '1.1rem' }}>
-            <PlayCircle size={20} /> Watch Demo
-          </button>
-        </div>
-
-        {/* Demo App Visual (Mockup) */}
-        <div className="glass-panel mt-4" style={{ marginTop: '64px', width: '100%', maxWidth: '1000px', padding: '8px', border: '1px solid var(--accent-2)', boxShadow: '0 20px 60px rgba(0, 240, 255, 0.15)' }}>
-          <div style={{ background: '#0a0a0f', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--panel-border)' }}>
-            
-            {/* Fake Dashboard Header */}
-            <div style={{ height: '40px', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', padding: '0 16px', gap: '8px', borderBottom: '1px solid var(--panel-border)' }}>
-              <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ff5f56' }} />
-              <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ffbd2e' }} />
-              <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#27c93f' }} />
-            </div>
-
-            {/* Fake Dashboard Content */}
-            <div style={{ padding: '40px', display: 'flex', flexDirection: 'column', gap: '24px', position: 'relative' }}>
-              <div className="flex-between">
-                <div>
-                  <h3 style={{ fontSize: '1.5rem' }}>Overview</h3>
-                  <p className="input-label">Real-time metrics</p>
-                </div>
-                <div style={{ padding: '8px 16px', background: 'var(--accent-gradient)', borderRadius: '8px', color: 'white', fontWeight: 'bold' }}>
-                  $14,250 Today
-                </div>
-              </div>
-
-              <div className="grid-3">
-                <div style={{ height: '100px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid var(--panel-border)', padding: '16px' }}>
-                  <TrendingUp color="var(--accent-1)" />
-                  <p style={{ marginTop: '16px', fontWeight: 'bold', fontSize: '1.2rem' }}>+24% Growth</p>
-                </div>
-                <div style={{ height: '100px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid var(--panel-border)', padding: '16px' }}>
-                  <ShieldCheck color="var(--accent-2)" />
-                  <p style={{ marginTop: '16px', fontWeight: 'bold', fontSize: '1.2rem' }}>Legal Compliant</p>
-                </div>
-                <div style={{ height: '100px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid var(--panel-border)', padding: '16px' }}>
-                  <Sparkles color="white" />
-                  <p style={{ marginTop: '16px', fontWeight: 'bold', fontSize: '1.2rem' }}>AI Optimized</p>
-                </div>
-              </div>
-              
-              {/* Play Overlay */}
-              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: 'rgba(0,0,0,0.6)', borderRadius: '50%', padding: '16px', cursor: 'pointer', border: '2px solid rgba(255,255,255,0.5)', backdropFilter: 'blur(4px)' }}>
-                <PlayCircle size={48} color="white" />
-              </div>
-            </div>
-
+          <div id={menuId} className="ci-menu-panel" hidden={!menuOpen}>
+            {links}
+            <Link to={exploreTo} className="ci-menu-explore" onClick={close}>Explore the workspace</Link>
           </div>
         </div>
+      </nav>
+    </header>
+  );
+}
+
+export default function Landing() {
+  const { user } = useAuth();
+  // Signed-in visitors go straight to their dashboard; everyone else starts onboarding
+  const exploreTo = user ? '/dashboard' : '/onboarding';
+
+  return (
+    <div className="ci-page">
+      <div className="ci-shell">
+        <SiteHeader exploreTo={exploreTo} signedIn={Boolean(user)} />
+
+        <main>
+          <section className="ci-hero" aria-labelledby="hero-title">
+            <div className="ci-hero-copy">
+              <p className="ci-eyebrow">A space for your next idea</p>
+              <h1 id="hero-title" className="ci-display">
+                <span>Less friction<span className="ci-stop">.</span></span>{' '}
+                <span>More flow<span className="ci-stop">.</span></span>
+              </h1>
+              <p className="ci-lede">Give your ideas room to take shape.</p>
+              <div className="ci-actions">
+                <Link to={exploreTo} className="ci-button ci-button--primary">
+                  Explore the workspace <ArrowRight aria-hidden="true" />
+                </Link>
+                <a href="#how-it-works" className="ci-text-link">
+                  See how it works <ChevronRight aria-hidden="true" />
+                </a>
+              </div>
+            </div>
+            <WorkspacePreview id="product" />
+          </section>
+
+          <hr className="ci-rule" />
+
+          <section id="how-it-works" className="ci-feature" aria-labelledby="feature-title">
+            <div className="ci-feature-copy">
+              <p className="ci-eyebrow">01 / From thought to form</p>
+              <h2 id="feature-title" className="ci-display ci-display--section">
+                <span>Make space</span>{' '}
+                <span>for better work<span className="ci-stop">.</span></span>
+              </h2>
+              <p className="ci-body">
+                Your app numbers in one place, so you can focus,
+                {' '}<br className="ci-wide-break" />explore, and make progress.
+              </p>
+            </div>
+            <div className="ci-feature-art">
+              <img src={sculpture} width="918" height="380" alt="" decoding="async" loading="lazy" />
+            </div>
+          </section>
+        </main>
+
+        <footer className="ci-footnote">VibeAssist / Revenue + Ads + Advice / For indie app makers</footer>
       </div>
     </div>
   );
