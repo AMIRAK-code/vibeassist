@@ -41,7 +41,9 @@ export default function Onboarding({ onComplete }) {
     // Simulate database signup and saving profile data
     setTimeout(() => {
       setLoading(false);
-      onComplete(); // Tells app we are authenticated
+      // Hand every answer except the password to the app's shared profile
+      const { name, age, goals, experience, profitExpectancy, email } = formData;
+      onComplete({ name: name.trim(), age, goals, experience, profitExpectancy, email: email.trim() }); // Tells app we are authenticated
       navigate('/premium'); // Must show paywall next
     }, 1500);
   };
@@ -133,9 +135,9 @@ export default function Onboarding({ onComplete }) {
                   value={formData.experience} 
                   onChange={(e) => setFormData({...formData, experience: e.target.value})}
                 >
-                  <option>Beginner (Vibe Coder)</option>
-                  <option>Intermediate (Some apps built)</option>
-                  <option>Pro (Full time indie)</option>
+                  <option value="Beginner">Beginner (Vibe Coder)</option>
+                  <option value="Intermediate">Intermediate (Some apps built)</option>
+                  <option value="Pro">Pro (Full time indie)</option>
                 </select>
               </div>
               <div className="input-group">
@@ -178,10 +180,14 @@ export default function Onboarding({ onComplete }) {
                 <input 
                   type="password" 
                   className="input-field" 
-                  style={{ width: '100%', paddingLeft: '40px', borderColor: passwordError ? '#ff5f56' : '' }}
+                  style={{ width: '100%', paddingLeft: '40px' }}
+                  aria-invalid={Boolean(passwordError)}
                   placeholder="••••••••"
                   value={formData.password}
-                  onChange={(e) => setFormData({...formData, password: e.target.value})}
+                  onChange={(e) => {
+                    setFormData({...formData, password: e.target.value});
+                    setPasswordError('');
+                  }}
                 />
                 <Lock size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
               </div>

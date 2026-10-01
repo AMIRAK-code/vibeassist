@@ -1,5 +1,5 @@
 import React from 'react';
-import { DollarSign, Download, Activity, TrendingUp, Users } from 'lucide-react';
+import { DollarSign, Download, TrendingUp, Users } from 'lucide-react';
 import { ComposedChart, Line, Area, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 const data = [
@@ -19,13 +19,49 @@ const data = [
   { name: '27th', revenue: 10500, profit: 8900, adSpend: 3000, organicDownloads: 5200, paidDownloads: 3100 },
 ];
 
-export default function Dashboard() {
+const DOWNLOAD_KEYS = ['paidDownloads', 'organicDownloads'];
+
+const revenueOf = (row) => row.revenue;
+const downloadsOf = (row) => row.organicDownloads + row.paidDownloads;
+const totalOf = (rows, valueOf) => rows.reduce((total, row) => total + valueOf(row), 0);
+
+// Cards compare the second half of the period with the first half, so every
+// number on this page comes from the same `data` the chart draws.
+const half = Math.floor(data.length / 2);
+const comparisonLabel = `vs. ${data[0].name}–${data[half - 1].name}`;
+const growthOf = (valueOf) => {
+  const before = totalOf(data.slice(0, half), valueOf);
+  const after = totalOf(data.slice(half), valueOf);
+  return ((after - before) / before) * 100;
+};
+
+const formatMoney = (value) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value);
+const formatCount = (value) => new Intl.NumberFormat('en-US').format(value);
+const formatCompactMoney = (value) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: 'compact' }).format(value);
+const formatCompactCount = (value) => new Intl.NumberFormat('en-US', { notation: 'compact' }).format(value);
+const formatGrowth = (percent) => `${percent >= 0 ? '+' : ''}${percent.toFixed(1)}%`;
+const growthColor = (percent) => (percent >= 0 ? '#2B75E8' : '#FF3B30');
+
+const totalRevenue = totalOf(data, revenueOf);
+const totalDownloads = totalOf(data, downloadsOf);
+const revenueGrowth = growthOf(revenueOf);
+const downloadsGrowth = growthOf(downloadsOf);
+
+export default function Dashboard({ profile }) {
+  const greeting = profile?.name ? `Welcome back, ${profile.name}. ` : '';
+
   return (
     <div className="animate-fade-in">
       <div className="flex-between mb-4">
         <div>
           <h2>Your <span className="text-gradient">Empire HUD</span></h2>
-          <p className="input-label mt-4" style={{ marginTop: '4px' }}>Overview of your vibes across all platforms.</p>
+          <p className="input-label mt-4" style={{ marginTop: '4px' }}>{greeting}Overview of your vibes across all platforms.</p>
+          {profile && (
+            <p className="input-label" style={{ marginTop: '4px', fontSize: '0.8rem' }}>
+              Monthly target: {profile.profitExpectancy}
+              {profile.goals.length > 0 && ` · Goals: ${profile.goals.join(', ')}`}
+            </p>
+          )}
         </div>
         <button className="btn btn-primary">Refresh Data</button>
       </div>
@@ -36,8 +72,8 @@ export default function Dashboard() {
             <h4 className="input-label">Total Revenue</h4>
             <DollarSign className="text-gradient" size={20} />
           </div>
-          <h2 className="mt-4" style={{ fontSize: '2rem' }}>$19,550</h2>
-          <p style={{ color: '#2B75E8', fontSize: '0.8rem', marginTop: '8px', fontWeight: 'bold' }}>+12.5% from last week</p>
+          <h2 className="mt-4" style={{ fontSize: '2rem' }}>{formatMoney(totalRevenue)}</h2>
+          <p style={{ color: growthColor(revenueGrowth), fontSize: '0.8rem', marginTop: '8px', fontWeight: 'bold' }}>{formatGrowth(revenueGrowth)} {comparisonLabel}</p>
         </div>
 
         <div className="glass-panel">
@@ -45,8 +81,8 @@ export default function Dashboard() {
             <h4 className="input-label">Downloads</h4>
             <Download className="text-gradient" size={20} />
           </div>
-          <h2 className="mt-4" style={{ fontSize: '2rem' }}>30,288</h2>
-          <p style={{ color: '#2B75E8', fontSize: '0.8rem', marginTop: '8px', fontWeight: 'bold' }}>+5.2% from last week</p>
+          <h2 className="mt-4" style={{ fontSize: '2rem' }}>{formatCount(totalDownloads)}</h2>
+          <p style={{ color: growthColor(downloadsGrowth), fontSize: '0.8rem', marginTop: '8px', fontWeight: 'bold' }}>{formatGrowth(downloadsGrowth)} {comparisonLabel}</p>
         </div>
 
         <div className="glass-panel">
@@ -68,39 +104,58 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="glass-panel mt-4" style={{ height: '450px', padding: '32px' }}>
+      <div className="glass-panel mt-4" style={{ height: '450px', padding: '32px', display: 'flex', flexDirection: 'column' }}>
         <h3 className="mb-4">Comprehensive Growth & Profit Analysis</h3>
-        <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 20 }}>
-            <defs>
-              <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#2B75E8" stopOpacity={0.4}/>
-                <stop offset="95%" stopColor="#2B75E8" stopOpacity={0}/>
-              </linearGradient>
-              <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#8CB9F0" stopOpacity={0.4}/>
-                <stop offset="95%" stopColor="#8CB9F0" stopOpacity={0}/>
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" />
-            <XAxis dataKey="name" stroke="#888" tick={{ fill: '#888' }} />
-            <YAxis stroke="#888" tick={{ fill: '#888' }} />
-            <Tooltip 
-              contentStyle={{ backgroundColor: '#FAF9F6', borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }} 
-              itemStyle={{ fontWeight: 'bold' }}
-            />
-            <Legend verticalAlign="top" height={36}/>
-            
-            {/* The multi-layered chart */}
-            <Area type="monotone" dataKey="revenue" name="Gross Revenue" fill="url(#colorRevenue)" stroke="#8CB9F0" strokeWidth={2} />
-            <Area type="monotone" dataKey="profit" name="Net Profit" fill="url(#colorProfit)" stroke="#2B75E8" strokeWidth={3} />
-            
-            <Bar dataKey="paidDownloads" name="Paid Acquisition" barSize={12} fill="#2B75E8" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="organicDownloads" name="Organic Installs" barSize={12} fill="#FCC624" radius={[4, 4, 0, 0]} />
-            
-            <Line type="monotone" dataKey="adSpend" name="Ad Spend" stroke="#000" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 4 }} />
-          </ComposedChart>
-        </ResponsiveContainer>
+        {/* The chart gets the space left under the heading, so it can't overflow the panel */}
+        <div style={{ flex: 1, minHeight: 0 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart data={data} margin={{ top: 10, right: 10, left: 10, bottom: 20 }}>
+              <defs>
+                <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#2B75E8" stopOpacity={0.4}/>
+                  <stop offset="95%" stopColor="#2B75E8" stopOpacity={0}/>
+                </linearGradient>
+                <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#8CB9F0" stopOpacity={0.4}/>
+                  <stop offset="95%" stopColor="#8CB9F0" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" />
+              <XAxis dataKey="name" stroke="#888" tick={{ fill: '#888' }} />
+              {/* Dollars on the left axis, downloads on the right, so neither scale distorts the other */}
+              <YAxis
+                yAxisId="money"
+                stroke="#888"
+                tick={{ fill: '#888' }}
+                tickFormatter={formatCompactMoney}
+                label={{ value: 'Revenue & spend (USD)', angle: -90, position: 'insideLeft', fill: '#888', style: { textAnchor: 'middle' } }}
+              />
+              <YAxis
+                yAxisId="downloads"
+                orientation="right"
+                stroke="#888"
+                tick={{ fill: '#888' }}
+                tickFormatter={formatCompactCount}
+                label={{ value: 'Downloads', angle: 90, position: 'insideRight', fill: '#888', style: { textAnchor: 'middle' } }}
+              />
+              <Tooltip
+                contentStyle={{ backgroundColor: '#FAF9F6', borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}
+                itemStyle={{ fontWeight: 'bold' }}
+                formatter={(value, name, item) => (DOWNLOAD_KEYS.includes(item.dataKey) ? formatCount(value) : formatMoney(value))}
+              />
+              <Legend verticalAlign="top" height={36}/>
+  
+              {/* The multi-layered chart */}
+              <Area yAxisId="money" type="monotone" dataKey="revenue" name="Gross Revenue" fill="url(#colorRevenue)" stroke="#8CB9F0" strokeWidth={2} />
+              <Area yAxisId="money" type="monotone" dataKey="profit" name="Net Profit" fill="url(#colorProfit)" stroke="#2B75E8" strokeWidth={3} />
+  
+              <Bar yAxisId="downloads" dataKey="paidDownloads" name="Paid Acquisition" barSize={12} fill="#2B75E8" radius={[4, 4, 0, 0]} />
+              <Bar yAxisId="downloads" dataKey="organicDownloads" name="Organic Installs" barSize={12} fill="#FCC624" radius={[4, 4, 0, 0]} />
+  
+              <Line yAxisId="money" type="monotone" dataKey="adSpend" name="Ad Spend" stroke="#000" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 4 }} />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
       </div>
     </div>
   );

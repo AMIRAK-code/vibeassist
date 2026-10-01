@@ -1,16 +1,32 @@
-import React, { useState } from 'react';
-import { Cpu, Send, Sparkles, TrendingUp, DollarSign, BrainCircuit } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Send, Sparkles, TrendingUp, DollarSign, BrainCircuit } from 'lucide-react';
 
-export default function AIAnalyzer() {
+// Opening message, tailored with the answers saved during onboarding
+const greetingFor = (profile) => {
+  const name = profile?.name ? ` ${profile.name}` : '';
+  const goals = profile?.goals.length ? `, goals: ${profile.goals.join(', ')}` : '';
+  const context = profile ? ` I'll tailor my advice to your profile (${profile.experience} level, ${profile.profitExpectancy}/month target${goals}).` : '';
+  return `Hello${name}! I am your AI Business Advisor.${context} Describe your app idea or paste your current metrics, and I will mathematically and economically analyze it to maximize your profit.`;
+};
+
+export default function AIAnalyzer({ profile }) {
   const [query, setQuery] = useState('');
-  const [messages, setMessages] = useState([
-    { role: 'system', content: 'Hello! I am your AI Business Advisor. Describe your app idea or paste your current metrics, and I will mathematically and economically analyze it to maximize your profit.' }
+  const [messages, setMessages] = useState(() => [
+    { role: 'system', content: greetingFor(profile) }
   ]);
+  const messagesRef = useRef(null);
+
+  // Keep the newest message in view
+  useEffect(() => {
+    const list = messagesRef.current;
+    if (list) list.scrollTop = list.scrollHeight;
+  }, [messages]);
 
   const handleSend = () => {
-    if (!query) return;
-    const newMsg = { role: 'user', content: query };
-    setMessages([...messages, newMsg]);
+    const text = query.trim();
+    if (!text) return;
+    const newMsg = { role: 'user', content: text };
+    setMessages(prev => [...prev, newMsg]);
     setQuery('');
     
     // Mock AI response
@@ -23,7 +39,8 @@ export default function AIAnalyzer() {
   };
 
   return (
-    <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    // Fill the viewport (minus .main-content's 40px top/bottom padding) so the message list scrolls instead of growing the page
+    <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 80px)' }}>
       <div className="mb-4">
         <h2><span className="text-gradient">AI</span> Business & Profit Analyzer</h2>
         <p className="input-label mt-4">Personalized recommendations driven by deep market models.</p>
@@ -54,7 +71,7 @@ export default function AIAnalyzer() {
       </div>
 
       <div className="glass-panel" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: '400px' }}>
-        <div style={{ flex: 1, overflowY: 'auto', paddingBottom: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div ref={messagesRef} style={{ flex: 1, minHeight: 0, overflowY: 'auto', paddingBottom: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {messages.map((msg, i) => (
             <div key={i} style={{ 
               alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
@@ -62,7 +79,8 @@ export default function AIAnalyzer() {
               padding: '12px 16px',
               borderRadius: '12px',
               maxWidth: '80%',
-              lineHeight: '1.5'
+              lineHeight: '1.5',
+              whiteSpace: 'pre-wrap'
             }}>
               {msg.role === 'system' && <Sparkles size={14} style={{ display: 'inline', marginRight: '8px', color: 'var(--accent-2)' }} />}
               {msg.content}
