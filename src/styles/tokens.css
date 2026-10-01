@@ -1,0 +1,59 @@
+/* Creative Instrument + Clay design tokens (public website).
+   Fonts are self-hosted from @fontsource (SIL Open Font License 1.1). */
+@import '@fontsource-variable/plus-jakarta-sans/wght.css';
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/500.css';
+
+:root {
+  /* Colour */
+  --ci-ivory: #F5F1E8;         /* page */
+  --ci-ink: #171717;           /* headlines and primary text */
+  --ci-cobalt: #2448FF;        /* actions and sculptural accents */
+  --ci-cobalt-light: #4566FF;
+  --ci-cobalt-deep: #1A37E0;
+  --ci-cobalt-tint: #E6ECFF;   /* selected states on white */
+  --ci-surface: #FFFDFA;       /* soft white interiors */
+  --ci-surface-warm: #FAF7F1;
+  --ci-muted: #66625B;         /* supporting text, 5.3:1 on ivory */
+  --ci-muted-soft: #79746C;    /* small captions, 4.5:1 on ivory */
+  --ci-rule: #D6D1C7;          /* thin pale-stone dividers */
+  --ci-hairline: #ECE7DE;      /* separators inside white surfaces */
+  --ci-focus: #2448FF;
+
+  /* Type */
+  --ci-font-sans: 'Plus Jakarta Sans Variable', 'Plus Jakarta Sans', system-ui, sans-serif;
+  --ci-font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+
+  /* Motion */
+  --ci-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --ci-fast: 160ms;
+
+  /* Clay: one light source from the upper left, warm contact shadows */
+  --ci-clay-cobalt:
+    inset 0 1px 0 rgba(255, 255, 255, 0.32),
+    inset 1px 0 0 rgba(255, 255, 255, 0.10),
+    inset 0 -3px 6px rgba(9, 22, 140, 0.30),
+    0 10px 20px -8px rgba(28, 56, 230, 0.55),
+    0 2px 4px rgba(23, 23, 23, 0.10);
+  --ci-clay-cobalt-hover:
+    inset 0 1px 0 rgba(255, 255, 255, 0.36),
+    inset 1px 0 0 rgba(255, 255, 255, 0.12),
+    inset 0 -3px 6px rgba(9, 22, 140, 0.30),
+    0 14px 24px -8px rgba(28, 56, 230, 0.55),
+    0 3px 6px rgba(23, 23, 23, 0.10);
+  --ci-clay-cobalt-pressed:
+    inset 0 2px 5px rgba(9, 22, 140, 0.40),
+    0 4px 10px -6px rgba(28, 56, 230, 0.50);
+  --ci-clay-ivory:
+    inset 2px 2px 2px rgba(255, 255, 255, 0.95),
+    inset -2px -3px 6px rgba(140, 120, 90, 0.12),
+    0 28px 56px -22px rgba(92, 74, 46, 0.30),
+    0 12px 24px -10px rgba(92, 74, 46, 0.16),
+    0 0 0 1px rgba(140, 120, 90, 0.10);
+  --ci-clay-float:
+    inset 0 1px 0 #FFFFFF,
+    inset 0 -2px 3px rgba(140, 120, 90, 0.08),
+    0 12px 24px -12px rgba(92, 74, 46, 0.38),
+    0 2px 6px rgba(92, 74, 46, 0.10),
+    0 0 0 1px rgba(140, 120, 90, 0.08);
+}
