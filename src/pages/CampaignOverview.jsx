@@ -1,7 +1,7 @@
 import React from 'react';
 import { Megaphone, Target, BarChart2, Hash, Maximize, PlayCircle } from 'lucide-react';
 
-export default function AdManager() {
+export default function CampaignOverview() {
   return (
     <div className="animate-fade-in">
       <div className="mb-4">
