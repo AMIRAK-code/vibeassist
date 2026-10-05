@@ -321,6 +321,11 @@ select.input-field { padding-right: 30px; }
 .app-nav .nav-tag { margin-left: auto; font-size: 11px; font-weight: 600; color: var(--ci-muted-soft); }
 
 .app-sidebar-footer { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--app-border); display: flex; flex-direction: column; gap: 2px; }
+.upgrade-card { margin-top: auto; margin-bottom: 12px; padding: 12px; border: 1px solid var(--app-border); border-radius: var(--app-radius); background: var(--ci-surface); }
+.upgrade-card p { font-size: 12.5px; line-height: 1.45; color: var(--ci-muted); }
+.upgrade-card .upgrade-card-title { font-size: 13.5px; font-weight: 600; color: var(--ci-ink); margin-bottom: 2px; }
+.upgrade-card .btn { margin-top: 10px; }
+.upgrade-card + .app-sidebar-footer { margin-top: 0; }
 .app-account { padding: 8px 10px 4px; font-size: 12.5px; color: var(--ci-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .app-main { min-width: 0; padding: 28px 40px 64px; }
@@ -362,6 +367,8 @@ select.input-field { padding-right: 30px; }
 .start-option h3 { font-size: 15px; }
 .start-option p { font-size: 13.5px; color: var(--ci-muted); margin-top: 2px; }
 .start-option .btn { margin-top: auto; align-self: flex-start; }
+a.start-option { transition: border-color var(--ci-fast) var(--ci-ease); }
+a.start-option:hover { border-color: var(--ci-cobalt); }
 
 .continue-row { display: flex; gap: 12px; flex-wrap: wrap; }
 .continue-item { flex: 1 1 220px; display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; border: 1px solid var(--app-border); border-radius: var(--app-radius); background: var(--ci-surface); font-size: 14px; }
@@ -448,6 +455,7 @@ select.input-field { padding-right: 30px; }
 .plan-option--featured { border-color: #C9D3FF; }
 .plan-price { font-size: 30px; font-weight: 700; letter-spacing: -0.03em; margin-top: 6px; font-variant-numeric: tabular-nums; }
 .plan-price span { font-size: 14px; font-weight: 500; color: var(--ci-muted); }
+.plan-price-was { font-size: 18px; font-weight: 500; color: var(--ci-muted); margin-right: 8px; }
 .plan-option ul { list-style: none; margin: 14px 0 18px; display: flex; flex-direction: column; gap: 8px; flex: 1; font-size: 14px; }
 .plan-option li { display: flex; gap: 8px; align-items: flex-start; }
 .plan-option li svg { width: 16px; height: 16px; color: var(--ci-cobalt); flex: none; margin-top: 3px; }
@@ -478,6 +486,13 @@ select.input-field { padding-right: 30px; }
 .auth-brand svg { width: 30px; height: 24px; }
 .auth-card h1 { font-size: 24px; margin-bottom: 4px; }
 .auth-card .lead { color: var(--ci-muted); margin-bottom: 20px; font-size: 14px; }
+.legal-page { min-height: 100vh; background: var(--ci-ivory); padding: 40px 16px 64px; }
+.legal-inner { max-width: 720px; margin: 0 auto; }
+.legal-inner h1 { font-size: 32px; margin-bottom: 4px; }
+.legal-inner h2 { font-size: 18px; margin: 28px 0 8px; }
+.legal-inner p, .legal-inner li { font-size: 15px; line-height: 1.65; }
+.legal-inner ul { padding-left: 20px; display: grid; gap: 6px; }
+.legal-links { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--app-border); font-size: 14px; }
 .auth-footer { margin-top: 16px; font-size: 14px; color: var(--ci-muted); text-align: center; }
 
 /* Responsive ---------------------------------------------------------------------------------- */
