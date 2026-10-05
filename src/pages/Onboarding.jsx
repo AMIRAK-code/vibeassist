@@ -4,6 +4,7 @@ import { MailCheck } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/auth';
 import { PASSWORD_HINT, validatePassword } from '../lib/password';
+import { authMessage, isValidEmail } from '../lib/authErrors';
 import BrandMark from '../components/landing/BrandMark';
 import Notice from '../components/ui/Notice';
 
@@ -18,10 +19,20 @@ export default function Onboarding() {
   const [signupError, setSignupError] = useState('');
   const [confirmationSentTo, setConfirmationSentTo] = useState('');
   const [signingUp, setSigningUp] = useState(false);
+  const [resend, setResend] = useState({ busy: false, waitUntil: 0, message: '', error: '' });
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     document.title = 'Create your account · VibeAssist';
   }, []);
+
+  // Ticks the resend countdown; Supabase allows one email per address per minute
+  const waiting = resend.waitUntil > now;
+  useEffect(() => {
+    if (!waiting) return undefined;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [waiting]);
 
   // Already signed in: nothing to set up
   if (user && !signingUp) return <Navigate to="/dashboard" replace />;
@@ -30,7 +41,7 @@ export default function Onboarding() {
     e.preventDefault();
     if (signingUp) return;
     const next = {};
-    if (!/^\S+@\S+\.\S+$/.test(form.email.trim())) next.email = 'Enter the email address you want to sign in with.';
+    if (!isValidEmail(form.email)) next.email = 'Enter the email address you want to sign in with.';
     const passwordError = validatePassword(form.password);
     if (passwordError) next.password = passwordError;
     setErrors(next);
@@ -49,9 +60,7 @@ export default function Onboarding() {
 
     if (error) {
       setSigningUp(false);
-      setSignupError(error.code === 'user_already_exists'
-        ? 'An account with this email already exists. Sign in instead, or reset your password from the sign-in page.'
-        : `${error.message} Your details are still filled in; try again.`);
+      setSignupError(`${authMessage(error, 'Could not create your account.')} Your details are still filled in.`);
       return;
     }
     if (data.session) {
@@ -60,7 +69,22 @@ export default function Onboarding() {
       // Email confirmation is on: the link in the email signs them in
       setSigningUp(false);
       setConfirmationSentTo(form.email.trim());
+      setResend({ busy: false, waitUntil: Date.now() + 60_000, message: '', error: '' });
+      setNow(Date.now());
     }
+  };
+
+  const resendEmail = async () => {
+    setResend((r) => ({ ...r, busy: true, message: '', error: '' }));
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: confirmationSentTo,
+      options: { emailRedirectTo: `${window.location.origin}/dashboard` },
+    });
+    setNow(Date.now());
+    setResend(error
+      ? { busy: false, waitUntil: 0, message: '', error: authMessage(error, 'Could not send the email. Try again in a minute.') }
+      : { busy: false, waitUntil: Date.now() + 60_000, message: `Sent again to ${confirmationSentTo}.`, error: '' });
   };
 
   if (confirmationSentTo) {
@@ -72,8 +96,18 @@ export default function Onboarding() {
           <p className="lead">
             We sent a confirmation link to <strong>{confirmationSentTo}</strong>. Open it on this device to finish creating your account.
           </p>
-          <p className="field-help">Nothing after a few minutes? Check your spam folder, or <button type="button" className="btn btn-ghost btn-sm" onClick={() => setConfirmationSentTo('')}>use a different email</button>.</p>
-          <Link to="/signin" className="btn btn-secondary" style={{ marginTop: 16 }}>I've confirmed, sign me in</Link>
+          <p className="field-help">
+            Nothing after a few minutes? Check your spam folder, then send it again. Already have an account with this email? <Link to="/signin">Sign in</Link> or reset your password there.
+          </p>
+          {resend.message && <div style={{ marginTop: 12 }}><Notice tone="success">{resend.message}</Notice></div>}
+          {resend.error && <div style={{ marginTop: 12 }}><Notice tone="error">{resend.error}</Notice></div>}
+          <div className="page-actions" style={{ marginTop: 16, justifyContent: 'center' }}>
+            <button type="button" className="btn btn-secondary" onClick={resendEmail} disabled={resend.busy || waiting} aria-busy={resend.busy}>
+              {resend.busy ? 'Sending…' : waiting ? `Resend in ${Math.ceil((resend.waitUntil - now) / 1000)}s` : 'Resend email'}
+            </button>
+            <Link to="/signin" className="btn btn-ghost">I've confirmed, sign me in</Link>
+          </div>
+          <button type="button" className="btn btn-ghost btn-sm" style={{ marginTop: 8 }} onClick={() => setConfirmationSentTo('')}>Use a different email</button>
         </div>
       </main>
     );
@@ -138,6 +172,9 @@ export default function Onboarding() {
           {signingUp ? <><span className="spinner spinner--light" /> Creating your account…</> : 'Create account'}
         </button>
         <p className="auth-footer">Already have an account? <Link to="/signin">Sign in</Link></p>
+        <p className="field-help" style={{ marginTop: 12, textAlign: 'center' }}>
+          By creating an account you agree to the <Link to="/terms">Terms</Link> and <Link to="/privacy">Privacy policy</Link>.
+        </p>
       </form>
     </main>
   );
