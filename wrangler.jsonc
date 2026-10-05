@@ -1,0 +1,17 @@
+// Cloudflare Workers deployment of the app at https://vibeassist.assist365.app.
+// It's a static site: `npm run deploy` builds it with Vite and uploads dist/.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "vibeassist",
+  // The account that holds the assist365.app zone.
+  "account_id": "6238aef0224c48ee73d9dfb95fd63796",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./dist",
+    // Any path that isn't a file gets index.html, so React Router handles /dashboard, /terms…
+    "not_found_handling": "single-page-application"
+  },
+  // Cloudflare creates and maintains the DNS record and certificate for this.
+  "routes": [{ "pattern": "vibeassist.assist365.app", "custom_domain": true }],
+  "workers_dev": false
+}
