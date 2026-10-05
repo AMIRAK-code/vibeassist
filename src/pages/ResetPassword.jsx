@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/auth';
 import { PASSWORD_HINT, validatePassword } from '../lib/password';
+import { authMessage } from '../lib/authErrors';
 import { useToast } from '../components/ui/toast-context';
 import BrandMark from '../components/landing/BrandMark';
 import FullPageSpinner from '../components/FullPageSpinner';
@@ -30,7 +31,7 @@ export default function ResetPassword() {
         <div className="card card--raised auth-card">
           <Link to="/" className="auth-brand"><BrandMark /> VibeAssist</Link>
           <h1>This link has expired</h1>
-          <p className="lead">Reset links work once and only for a short time. Request a new one from the sign-in page.</p>
+          <p className="lead">Reset links work once and only for an hour. Request a new one from the sign-in page with “Forgot password?”.</p>
           <Link to="/signin" className="btn btn-primary">Back to sign in</Link>
         </div>
       </main>
@@ -49,7 +50,7 @@ export default function ResetPassword() {
     const { error: updateError } = await supabase.auth.updateUser({ password });
     setBusy(false);
     if (updateError) {
-      setError(`${updateError.message} Your new password is still in the box; try again.`);
+      setError(`${authMessage(updateError, 'Could not save your password.')} Your new password is still in the box.`);
       return;
     }
     toast.show({ message: 'Password changed.' });
