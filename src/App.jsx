@@ -9,6 +9,7 @@ import FullPageSpinner from './components/FullPageSpinner';
 import BrandMark from './components/landing/BrandMark';
 import PremiumGate from './components/PremiumGate';
 import PageErrorBoundary from './components/PageErrorBoundary';
+import { initialAuthLinkError } from './lib/authErrors';
 import Landing from './pages/Landing';
 import SignIn from './pages/SignIn';
 import ResetPassword from './pages/ResetPassword';
@@ -23,6 +24,10 @@ const LaunchGuides = lazy(() => import('./pages/LaunchGuides'));
 const CampaignOverview = lazy(() => import('./pages/CampaignOverview'));
 const News = lazy(() => import('./pages/News'));
 const Settings = lazy(() => import('./pages/Settings'));
+const CheckoutReturn = lazy(() => import('./pages/CheckoutReturn'));
+const Terms = lazy(() => import('./pages/Legal').then((m) => ({ default: m.Terms })));
+const Privacy = lazy(() => import('./pages/Legal').then((m) => ({ default: m.Privacy })));
+const Refunds = lazy(() => import('./pages/Legal').then((m) => ({ default: m.Refunds })));
 
 const WORK = [
   { to: '/dashboard', label: 'Overview', icon: LayoutDashboard },
@@ -46,9 +51,28 @@ function NavItem({ item, hasPremium, onNavigate }) {
   );
 }
 
+// The way into Premium, always in view for anyone who doesn't pay for it yet
+function UpgradeCard({ subscription, onNavigate }) {
+  const location = useLocation();
+  const demoEnds = subscription?.current_period_end
+    ? new Date(subscription.current_period_end).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    : null;
+  return (
+    <div className="upgrade-card">
+      <p className="upgrade-card-title">{demoEnds ? `Your demo Premium ends ${demoEnds}` : "You're on the Free plan"}</p>
+      <p>Weekly plans from your numbers, Stripe imports and campaign tracking.</p>
+      <Link to={`/premium?from=${encodeURIComponent(location.pathname)}`} className="btn btn-primary btn-sm w-full" onClick={onNavigate}>
+        {demoEnds ? 'Subscribe' : 'Upgrade to Premium'}
+      </Link>
+    </div>
+  );
+}
+
 function Sidebar({ open, onClose }) {
-  const { user, hasPremium, signOut } = useAuth();
+  const { user, hasPremium, subscription, signOut } = useAuth();
   const navigate = useNavigate();
+  const demo = hasPremium && subscription?.source === 'demo';
+  const planName = !hasPremium ? 'Free plan' : demo ? 'Demo Premium' : subscription.source === 'admin' ? 'Admin Premium' : 'Premium';
   const firstLink = useRef(null);
 
   // Mobile drawer: move focus in when it opens, close with Escape
@@ -69,19 +93,21 @@ function Sidebar({ open, onClose }) {
     <>
       {open && <button type="button" className="drawer-scrim" aria-label="Close menu" onClick={onClose} />}
       <aside className={`app-sidebar${open ? ' is-open' : ''}`} aria-label="Main navigation" id="app-navigation">
-        <Link to="/dashboard" className="app-brand" onClick={onClose}><BrandMark /> VibeAssist</Link>
+        {/* The logo leads back to the homepage, as it always has */}
+        <Link to="/" className="app-brand" aria-label="VibeAssist home" onClick={onClose}><BrandMark /> VibeAssist</Link>
         <nav className="app-nav" ref={firstLink}>
           {WORK.map((item) => <NavItem key={item.to} item={item} hasPremium={hasPremium} onNavigate={onClose} />)}
           <p className="app-nav-label">Reference</p>
           {REFERENCE.map((item) => <NavItem key={item.to} item={item} hasPremium={hasPremium} onNavigate={onClose} />)}
         </nav>
+        {(!hasPremium || demo) && <UpgradeCard subscription={demo ? subscription : null} onNavigate={onClose} />}
         <div className="app-sidebar-footer app-nav">
           <NavLink to="/settings" onClick={onClose}><SettingsIcon aria-hidden="true" /> Settings</NavLink>
           <button type="button" className="btn btn-ghost" style={{ justifyContent: 'flex-start', minHeight: 38, fontWeight: 500 }} onClick={handleSignOut}>
             <LogOut aria-hidden="true" /> Sign out
           </button>
           <p className="app-account" title={user?.email}>
-            {user?.email} · {hasPremium ? 'Premium' : <Link to="/premium">Free plan</Link>}
+            {user?.email} · {planName}
           </p>
         </div>
       </aside>
@@ -108,7 +134,7 @@ function MainLayout() {
       <Sidebar open={menuOpen} onClose={close} />
       <div className="app-main-wrap">
         <div className="app-topbar">
-          <Link to="/dashboard" className="app-brand"><BrandMark /> VibeAssist</Link>
+          <Link to="/" className="app-brand" aria-label="VibeAssist home"><BrandMark /> VibeAssist</Link>
           {current && <span className="app-topbar-title">{current.label}</span>}
           <button
             type="button"
@@ -186,6 +212,19 @@ function SetupRequired() {
   );
 }
 
+// An emailed link that expired or was already used comes back with error details in the URL,
+// possibly on a public page. Send the visitor to sign in, which explains it and offers a new link.
+function AuthLinkErrorRedirect() {
+  const navigate = useNavigate();
+  const handled = useRef(false);
+  useEffect(() => {
+    if (!initialAuthLinkError || handled.current) return;
+    handled.current = true;
+    navigate('/signin', { replace: true, state: { linkError: initialAuthLinkError } });
+  }, [navigate]);
+  return null;
+}
+
 function App() {
   if (!supabase) return <SetupRequired />;
 
@@ -193,18 +232,23 @@ function App() {
     <AuthProvider>
       <ToastProvider>
         <Router>
+          <AuthLinkErrorRedirect />
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/signin" element={<SignIn />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/premium" element={<PaywallRoute />} />
+            <Route path="/terms" element={<Suspense fallback={<FullPageSpinner />}><Terms /></Suspense>} />
+            <Route path="/privacy" element={<Suspense fallback={<FullPageSpinner />}><Privacy /></Suspense>} />
+            <Route path="/refunds" element={<Suspense fallback={<FullPageSpinner />}><Refunds /></Suspense>} />
 
             <Route element={<AuthRoute />}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/launch" element={<LaunchGuides />} />
               <Route path="/news" element={<News />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/premium/welcome" element={<CheckoutReturn />} />
               <Route element={<PremiumRoute feature="plan" />}>
                 <Route path="/plan" element={<Plan />} />
               </Route>

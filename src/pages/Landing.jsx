@@ -7,6 +7,8 @@ import WorkspacePreview from '../components/landing/WorkspacePreview';
 import sculpture from '../assets/landing/clay-sculpture.webp';
 import '../styles/tokens.css';
 import './Landing.css';
+import LegalLinks from '../components/LegalLinks';
+import { BUSINESS } from '../lib/business';
 
 function SiteHeader({ exploreTo, signedIn }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -117,7 +119,11 @@ export default function Landing() {
           </section>
         </main>
 
-        <footer className="ci-footnote">VibeAssist / Revenue + Ads + Advice / For indie app makers</footer>
+        <footer className="ci-footnote">
+          <span>VibeAssist / Revenue + Ads + Advice / For indie app makers</span>
+          {BUSINESS.name && <span>{BUSINESS.name}{BUSINESS.vatNumber && ` / P.IVA ${BUSINESS.vatNumber}`}</span>}
+          <LegalLinks className="ci-footnote-links" />
+        </footer>
       </div>
     </div>
   );

@@ -1,10 +1,7 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { isActivePremium, syncBilling } from '../lib/billing';
 import { AuthContext } from './auth';
-
-const isActivePremium = (subscription) =>
-  subscription?.plan === 'premium' &&
-  (!subscription.current_period_end || new Date(subscription.current_period_end) > new Date());
 
 // Restores the Supabase session on load and keeps the signed-in user's profile and
 // plan in one place, so every page and route guard reads the same state.
@@ -13,6 +10,7 @@ export function AuthProvider({ children }) {
   // Which user the profile/plan below belong to; differs from the session while loading
   const [account, setAccount] = useState({ userId: null, profile: null, subscription: null, hasPremium: false });
   const userId = session?.user?.id ?? null;
+  const askedStripe = useRef(null); // user id we already re-checked with Stripe
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -26,7 +24,14 @@ export function AuthProvider({ children }) {
       supabase.from('profiles').select('*').eq('id', userId).maybeSingle(),
       supabase.from('subscriptions').select('*').eq('user_id', userId).maybeSingle(),
     ]);
-    const subscription = subscriptionResult.data ?? null;
+    let subscription = subscriptionResult.data ?? null;
+    // A paid plan that looks expired usually means the renewal webhook is late: ask Stripe
+    // directly, once per session, before taking Premium away
+    if (subscription?.source === 'stripe' && subscription.plan === 'premium' && !isActivePremium(subscription) && askedStripe.current !== userId) {
+      askedStripe.current = userId;
+      const synced = await syncBilling();
+      if (synced?.subscription) subscription = synced.subscription;
+    }
     setAccount({ userId, profile: profileResult.data ?? null, subscription, hasPremium: isActivePremium(subscription) });
   }, [userId]);
 
@@ -43,7 +48,8 @@ export function AuthProvider({ children }) {
     hasPremium: current && account.hasPremium,
     loading: session === undefined || (userId !== null && !current),
     refreshAccount,
-    signOut: () => supabase.auth.signOut(),
+    // Only this browser: signing out on a phone shouldn't end the session on a laptop
+    signOut: () => supabase.auth.signOut({ scope: 'local' }),
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

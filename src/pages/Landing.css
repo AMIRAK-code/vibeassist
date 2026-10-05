@@ -258,12 +258,19 @@
 .ci-feature-art img { display: block; width: 100%; height: 100%; }
 
 .ci-footnote {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: calc(10 * var(--u)) calc(24 * var(--u));
   font-family: var(--ci-font-mono);
   font-size: calc(10 * var(--u));
   line-height: 1;
   letter-spacing: 0.1em;
   color: var(--ci-muted-soft);
 }
+.ci-footnote-links { display: flex; gap: calc(18 * var(--u)); }
+.ci-footnote-links a { color: inherit; text-decoration: none; }
+.ci-footnote-links a:hover { color: var(--ci-ink); text-decoration: underline; }
 
 /* Workspace preview ------------------------------------------------------------- */
 

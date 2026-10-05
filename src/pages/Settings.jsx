@@ -7,6 +7,8 @@ import { friendlyError, supabase } from '../lib/supabase';
 import { CURRENCIES, EXPERIENCE_OPTIONS, GOALS, PROFIT_OPTIONS } from '../lib/options';
 import { METRIC_COLUMNS } from '../lib/metrics';
 import { downloadCsv } from '../lib/csv';
+import { openBillingPortal, planSummary } from '../lib/billing';
+import { authMessage } from '../lib/authErrors';
 import PageHeader from '../components/ui/PageHeader';
 import Notice from '../components/ui/Notice';
 
@@ -21,7 +23,6 @@ const pick = (p) => ({
 });
 const differing = (a, b) => FIELDS.filter((f) => JSON.stringify(a[f] ?? '') !== JSON.stringify(b[f] ?? ''));
 const listOf = (items) => (items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} and ${items.at(-1)}`);
-const planLabel = { monthly: 'monthly', yearly: 'yearly', promo: 'two-month trial' };
 
 export default function Settings() {
   const { user, profile, subscription, hasPremium, refreshAccount, signOut } = useAuth();
@@ -32,6 +33,7 @@ export default function Settings() {
   const [errorText, setErrorText] = useState('');
   const [changedElsewhere, setChangedElsewhere] = useState([]);
   const [busy, setBusy] = useState('');
+  const [confirmingFree, setConfirmingFree] = useState(false);
   const base = useRef({ values: pick(profile), version: profile?.updated_at });
   const queue = useRef(Promise.resolve());
   const nameTimer = useRef(null);
@@ -117,32 +119,43 @@ export default function Settings() {
   const toggleGoal = (goal) =>
     update({ goals: form.goals.includes(goal) ? form.goals.filter((g) => g !== goal) : [...form.goals, goal] });
 
-  const switchPlan = async (plan, cycle) => {
-    const previous = subscription;
-    setBusy('plan');
-    const { error } = await supabase.rpc('choose_plan', { p_plan: plan, p_billing_cycle: cycle });
+  // Coming back from Stripe's billing page with the Back button restores this page as it was
+  useEffect(() => {
+    const onShow = (e) => e.persisted && setBusy('');
+    window.addEventListener('pageshow', onShow);
+    return () => window.removeEventListener('pageshow', onShow);
+  }, []);
+
+  const manageBilling = async () => {
+    setBusy('portal');
+    const result = await openBillingPortal();
+    if (result.url) {
+      window.location.assign(result.url);
+      return;
+    }
     setBusy('');
+    toast.show({ message: result.error, tone: 'error' });
+  };
+
+  // Demo plans were free, so switching one off can't be undone by switching back
+  const switchDemoToFree = async () => {
+    setBusy('plan');
+    const { error } = await supabase.rpc('choose_plan', { p_plan: 'free', p_billing_cycle: null });
+    setBusy('');
+    setConfirmingFree(false);
     if (error) {
       toast.show({ message: friendlyError(error, 'Could not change your plan. Try again.'), tone: 'error' });
       return;
     }
     await refreshAccount();
-    if (plan === 'free') {
-      toast.show({
-        message: 'Switched to Free. Your data, plans and campaigns are kept.',
-        actionLabel: 'Undo',
-        onAction: () => switchPlan('premium', previous?.billing_cycle ?? 'monthly'),
-      });
-    } else {
-      toast.show({ message: 'Premium is back on.' });
-    }
+    toast.show({ message: 'Switched to Free. Your data, plans and campaigns are kept.' });
   };
 
   const sendReset = async () => {
     setBusy('reset');
     const { error } = await supabase.auth.resetPasswordForEmail(user.email, { redirectTo: `${window.location.origin}/reset-password` });
     setBusy('');
-    if (error) toast.show({ message: friendlyError(error, 'Could not send the email. Try again in a minute.'), tone: 'error' });
+    if (error) toast.show({ message: authMessage(error, 'Could not send the email. Try again in a minute.'), tone: 'error' });
     else toast.show({ message: `Sent a password reset link to ${user.email}.` });
   };
 
@@ -161,6 +174,9 @@ export default function Settings() {
     ], data);
     toast.show({ message: `Exported ${data.length} rows.` });
   };
+
+  const plan = planSummary(subscription);
+  const demoPlan = hasPremium && subscription?.source === 'demo';
 
   return (
     <>
@@ -245,22 +261,33 @@ export default function Settings() {
 
       <section className="card section" aria-labelledby="plan-title">
         <h2 id="plan-title" className="card-title">Plan</h2>
-        {hasPremium ? (
-          <p style={{ marginTop: 6 }}>
-            Premium ({planLabel[subscription?.billing_cycle] ?? 'demo'})
-            {subscription?.current_period_end && ` until ${new Date(subscription.current_period_end).toLocaleDateString()}`}.
-          </p>
-        ) : (
-          <p style={{ marginTop: 6 }}>Free: overview, manual entry, launch guides and news.</p>
-        )}
-        <p className="field-help">Checkout is in demo mode: changing plans never charges you.</p>
+        <p style={{ marginTop: 6 }}><strong>{plan.label}</strong></p>
+        {plan.warning
+          ? <div style={{ marginTop: 8 }}><Notice tone="warning">{plan.detail}</Notice></div>
+          : <p className="field-help">{plan.detail}</p>}
         <div className="page-actions" style={{ marginTop: 12 }}>
-          {hasPremium ? (
-            <button type="button" className="btn btn-secondary" onClick={() => switchPlan('free', null)} disabled={busy === 'plan'}>{busy === 'plan' ? 'Switching…' : 'Switch to Free'}</button>
-          ) : (
-            <Link to="/premium?from=/settings" className="btn btn-secondary">See Premium plans</Link>
+          {subscription?.source === 'stripe' && (
+            <button type="button" className="btn btn-secondary" onClick={manageBilling} disabled={Boolean(busy)} aria-busy={busy === 'portal'}>
+              {busy === 'portal' ? 'Opening billing…' : hasPremium ? 'Manage billing' : 'Billing history'}
+            </button>
+          )}
+          {(!hasPremium || demoPlan) && (
+            <Link to="/premium?from=/settings" className={`btn ${hasPremium ? 'btn-ghost' : 'btn-secondary'}`}>{demoPlan ? 'Subscribe' : 'See Premium plans'}</Link>
+          )}
+          {demoPlan && !confirmingFree && (
+            <button type="button" className="btn btn-ghost" onClick={() => setConfirmingFree(true)}>Switch to Free</button>
+          )}
+          {demoPlan && confirmingFree && (
+            <span className="inline-confirm" role="group" aria-label="Confirm switching to Free">
+              Demo Premium can't be turned back on.
+              <button type="button" className="btn btn-danger btn-sm" onClick={switchDemoToFree} disabled={busy === 'plan'}>{busy === 'plan' ? 'Switching…' : 'Switch to Free'}</button>
+              <button type="button" className="btn btn-ghost btn-sm" onClick={() => setConfirmingFree(false)} disabled={busy === 'plan'}>Cancel</button>
+            </span>
           )}
         </div>
+        {hasPremium && subscription?.source === 'stripe' && (
+          <p className="field-help" style={{ marginTop: 10 }}>Change plan, update your card, download invoices or cancel on Stripe's billing page.</p>
+        )}
       </section>
 
       <section className="card section" aria-labelledby="account-title">
