@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
-import { MailCheck } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/auth';
 import { PASSWORD_HINT, validatePassword } from '../lib/password';
@@ -17,22 +16,11 @@ export default function Onboarding() {
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [signupError, setSignupError] = useState('');
-  const [confirmationSentTo, setConfirmationSentTo] = useState('');
   const [signingUp, setSigningUp] = useState(false);
-  const [resend, setResend] = useState({ busy: false, waitUntil: 0, message: '', error: '' });
-  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     document.title = 'Create your account · VibeAssist';
   }, []);
-
-  // Ticks the resend countdown; Supabase allows one email per address per minute
-  const waiting = resend.waitUntil > now;
-  useEffect(() => {
-    if (!waiting) return undefined;
-    const id = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, [waiting]);
 
   // Already signed in: nothing to set up
   if (user && !signingUp) return <Navigate to="/dashboard" replace />;
@@ -52,10 +40,7 @@ export default function Onboarding() {
     const { data, error } = await supabase.auth.signUp({
       email: form.email.trim(),
       password: form.password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/dashboard`,
-        data: { name: form.name.trim() },
-      },
+      options: { data: { name: form.name.trim() } },
     });
 
     if (error) {
@@ -66,52 +51,11 @@ export default function Onboarding() {
     if (data.session) {
       navigate('/dashboard', { replace: true });
     } else {
-      // Email confirmation is on: the link in the email signs them in
+      // No session means Supabase still requires email confirmation, which this app no longer uses
       setSigningUp(false);
-      setConfirmationSentTo(form.email.trim());
-      setResend({ busy: false, waitUntil: Date.now() + 60_000, message: '', error: '' });
-      setNow(Date.now());
+      setSignupError('Your account was created, but we could not sign you in. Sign in to continue.');
     }
   };
-
-  const resendEmail = async () => {
-    setResend((r) => ({ ...r, busy: true, message: '', error: '' }));
-    const { error } = await supabase.auth.resend({
-      type: 'signup',
-      email: confirmationSentTo,
-      options: { emailRedirectTo: `${window.location.origin}/dashboard` },
-    });
-    setNow(Date.now());
-    setResend(error
-      ? { busy: false, waitUntil: 0, message: '', error: authMessage(error, 'Could not send the email. Try again in a minute.') }
-      : { busy: false, waitUntil: Date.now() + 60_000, message: `Sent again to ${confirmationSentTo}.`, error: '' });
-  };
-
-  if (confirmationSentTo) {
-    return (
-      <main className="auth-page">
-        <div className="card card--raised auth-card text-center">
-          <MailCheck aria-hidden="true" style={{ width: 36, height: 36, color: 'var(--ci-cobalt)', margin: '0 auto 12px' }} />
-          <h1>Check your inbox</h1>
-          <p className="lead">
-            We sent a confirmation link to <strong>{confirmationSentTo}</strong>. Open it on this device to finish creating your account.
-          </p>
-          <p className="field-help">
-            Nothing after a few minutes? Check your spam folder, then send it again. Already have an account with this email? <Link to="/signin">Sign in</Link> or reset your password there.
-          </p>
-          {resend.message && <div style={{ marginTop: 12 }}><Notice tone="success">{resend.message}</Notice></div>}
-          {resend.error && <div style={{ marginTop: 12 }}><Notice tone="error">{resend.error}</Notice></div>}
-          <div className="page-actions" style={{ marginTop: 16, justifyContent: 'center' }}>
-            <button type="button" className="btn btn-secondary" onClick={resendEmail} disabled={resend.busy || waiting} aria-busy={resend.busy}>
-              {resend.busy ? 'Sending…' : waiting ? `Resend in ${Math.ceil((resend.waitUntil - now) / 1000)}s` : 'Resend email'}
-            </button>
-            <Link to="/signin" className="btn btn-ghost">I've confirmed, sign me in</Link>
-          </div>
-          <button type="button" className="btn btn-ghost btn-sm" style={{ marginTop: 8 }} onClick={() => setConfirmationSentTo('')}>Use a different email</button>
-        </div>
-      </main>
-    );
-  }
 
   return (
     <main className="auth-page">
