@@ -67,7 +67,9 @@ function combineByDay(rows) {
 }
 
 function totalsBetween(byDay, firstDay, lastDay) {
-  const totals = { revenue: 0, fees: 0, adSpend: 0, downloads: 0, purchases: 0, daysWithData: 0 };
+  const totals = { revenue: 0, fees: 0, adSpend: 0, downloads: 0, purchases: 0, daysWithData: 0, activeUsersAvg: null };
+  let activeUsersSum = 0;
+  let activeUsersDays = 0;
   for (const [day, t] of byDay) {
     if (day < firstDay || day > lastDay) continue;
     totals.revenue += t.revenue;
@@ -76,7 +78,13 @@ function totalsBetween(byDay, firstDay, lastDay) {
     totals.downloads += t.organicDownloads + t.paidDownloads;
     totals.purchases += t.purchases;
     totals.daysWithData++;
+    if (t.activeUsers !== null) {
+      activeUsersSum += t.activeUsers;
+      activeUsersDays++;
+    }
   }
+  // Average over the days that reported active users; days without a figure don't count as zero
+  if (activeUsersDays) totals.activeUsersAvg = activeUsersSum / activeUsersDays;
   return totals;
 }
 
@@ -101,15 +109,16 @@ export function summarize(rows, periodDays) {
 
   const current = totalsBetween(byDay, isoDay(addDays(today, -(periodDays - 1))), isoDay(today));
   const previous = totalsBetween(byDay, isoDay(addDays(today, -(2 * periodDays - 1))), isoDay(addDays(today, -periodDays)));
-  const latestActiveUsers = [...byDay.entries()]
+  const [latestActiveUsersDay = null, latest] = [...byDay.entries()]
     .filter(([, t]) => t.activeUsers !== null)
-    .sort(([a], [b]) => b.localeCompare(a))[0]?.[1].activeUsers ?? null;
+    .sort(([a], [b]) => b.localeCompare(a))[0] ?? [];
 
   return {
     chartData,
     current,
     previous,
-    latestActiveUsers,
+    latestActiveUsers: latest?.activeUsers ?? null,
+    latestActiveUsersDay,
     sources: [...new Set(rows.map((row) => row.source))],
   };
 }
