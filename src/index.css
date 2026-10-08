@@ -436,6 +436,26 @@ a.start-option:hover { border-color: var(--ci-cobalt); }
 .qa-question { font-weight: 600; }
 .qa-answer { white-space: pre-wrap; margin-top: 4px; }
 
+/* Ad Manager ----------------------------------------------------------------------------------- */
+.input-field.input-sm { min-height: 34px; padding-top: 6px; padding-bottom: 6px; font-size: 13.5px; width: auto; }
+.inline-form { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
+.inline-form .input-field { width: 110px; }
+.stat-action { margin-top: 6px; margin-left: -8px; }
+.network-list { list-style: none; margin: 0; padding: 0; }
+.network-list li { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-top: 1px solid var(--ci-hairline); }
+.network-list li:first-child { border-top: 0; }
+.network-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.network-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.network-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.campaign-import .import-mapping { border: 0; padding: 0; margin: 16px 0 0; }
+.campaign-import .import-mapping legend { margin-bottom: 8px; }
+.import-summary { font-size: 14px; font-weight: 600; margin: 12px 0 8px; }
+.import-problems { margin: 0 0 8px 18px; }
+@media (max-width: 640px) {
+  .network-list li { flex-wrap: wrap; }
+  .network-actions { width: 100%; justify-content: flex-start; padding-left: 22px; }
+}
+
 /* AI Business Analyzer ---------------------------------------------------------------------- */
 .analyzer-cards > .card { display: flex; flex-direction: column; }
 .analyzer-cards .analyzer-ask { margin-top: auto; align-self: flex-start; }
