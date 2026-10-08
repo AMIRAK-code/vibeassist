@@ -456,6 +456,34 @@ a.start-option:hover { border-color: var(--ci-cobalt); }
   .network-actions { width: 100%; justify-content: flex-start; padding-left: 22px; }
 }
 
+/* Publishing & Legal Center ------------------------------------------------------------------- */
+.platform-card { display: flex; flex-direction: column; gap: 10px; }
+.platform-card.is-selected { border-color: var(--ci-cobalt-light); box-shadow: 0 0 0 1px var(--ci-cobalt-light) inset; }
+.platform-card-head { display: flex; align-items: center; gap: 10px; }
+.platform-card-head svg { width: 24px; height: 24px; flex: none; color: var(--ci-cobalt); }
+.platform-card-head .badge { margin-left: auto; }
+.platform-card-summary { font-size: 14px; color: var(--ci-muted); line-height: 1.5; flex: 1; }
+#checklist-section:focus { outline: none; }
+.legal-gate .source-head .badge { margin-left: auto; }
+.legal-generator > * + * { margin-top: 16px; }
+.legal-checks { border: 0; padding: 0; margin: 14px 0 0; }
+.legal-checks legend { margin-bottom: 6px; }
+.check-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 4px 14px; }
+.legal-docs { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 16px; align-items: start; }
+.legal-doc-list { list-style: none; margin: 0; padding: 0; }
+.legal-doc-list button { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; text-align: left; padding: 10px 14px; background: none; border: 0; border-top: 1px solid var(--ci-hairline); cursor: pointer; font: inherit; color: inherit; }
+.legal-doc-list li:first-child button { border-top: 0; }
+.legal-doc-list button[aria-current='true'] { background: var(--ci-cobalt-tint); }
+.legal-doc .notice { margin: 12px 0; }
+.legal-body h4 { font-size: 15px; margin: 18px 0 6px; }
+.legal-body p, .legal-body li { font-size: 14.5px; line-height: 1.6; }
+.legal-body p + p { margin-top: 8px; }
+.legal-body ul { margin: 6px 0 0 18px; }
+.legal-edit textarea { font-size: 14px; }
+@media (max-width: 900px) {
+  .legal-docs { grid-template-columns: 1fr; }
+}
+
 /* AI Business Analyzer ---------------------------------------------------------------------- */
 .analyzer-cards > .card { display: flex; flex-direction: column; }
 .analyzer-cards .analyzer-ask { margin-top: auto; align-self: flex-start; }
