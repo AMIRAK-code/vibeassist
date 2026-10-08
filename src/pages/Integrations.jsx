@@ -5,28 +5,13 @@ import { callFunction, friendlyError, supabase, supabasePublishableKey, supabase
 import { formatDateTime } from '../lib/format';
 import PageHeader from '../components/ui/PageHeader';
 import Notice from '../components/ui/Notice';
+import ConfirmButton from '../components/ui/ConfirmButton';
+import StoreCard from '../components/StoreCard';
 
 const exampleRequest = (key) => `curl -X POST "${supabaseUrl}/rest/v1/rpc/ingest_metrics" \\
   -H "apikey: ${supabasePublishableKey}" \\
   -H "Content-Type: application/json" \\
   -d '{"p_api_key": "${key}", "p_rows": [{"date": "2026-10-01", "revenue": 120.50, "organic_downloads": 40, "paid_downloads": 12, "purchases": 5, "active_users": 800}]}'`;
-
-// Inline "are you sure" for actions that can't be undone from here
-function ConfirmButton({ label, question, busyLabel, busy, onConfirm, disabled }) {
-  const [asking, setAsking] = useState(false);
-  if (!asking) {
-    return <button type="button" className="btn btn-ghost" onClick={() => setAsking(true)} disabled={disabled}>{label}</button>;
-  }
-  return (
-    <span className="inline-confirm" role="group" aria-label={question}>
-      {question}
-      <button type="button" className="btn btn-danger btn-sm" onClick={async () => { await onConfirm(); setAsking(false); }} disabled={busy}>
-        {busy ? busyLabel : label}
-      </button>
-      <button type="button" className="btn btn-ghost btn-sm" onClick={() => setAsking(false)} disabled={busy}>Cancel</button>
-    </span>
-  );
-}
 
 export default function Integrations() {
   const toast = useToast();
@@ -40,7 +25,7 @@ export default function Integrations() {
 
   const load = useCallback(async () => {
     const [connections, keys] = await Promise.all([
-      supabase.from('integrations').select('provider, status, account_label, last_error, last_synced_at'),
+      supabase.from('integrations').select('provider, status, account_label, last_error, last_synced_at, settings'),
       // The key hash is not readable, so name the columns instead of select('*')
       supabase.from('api_keys').select('key_prefix, created_at, last_used_at').is('revoked_at', null).maybeSingle(),
     ]);
@@ -116,7 +101,7 @@ export default function Integrations() {
           <div className="source-head">
             <CreditCard aria-hidden="true" />
             <div>
-              <h2 id="stripe-title" className="card-title">Stripe</h2>
+              <h2 id="stripe-title" className="card-title">Stripe (Web Payments)</h2>
               <p className="card-subtitle">Daily revenue, refunds, fees and purchases for the last 90 days.</p>
             </div>
             {integrations && (
@@ -173,7 +158,7 @@ export default function Integrations() {
           <div className="source-head">
             <AppWindow aria-hidden="true" />
             <div>
-              <h2 id="api-title" className="card-title">Custom API</h2>
+              <h2 id="api-title" className="card-title">Custom API (Web/PC)</h2>
               <p className="card-subtitle">Send daily numbers from your own app, backend or a script with one HTTP request.</p>
             </div>
             {integrations && <span className={`badge ${activeKey ? 'badge--success' : ''}`}>{activeKey ? `Key ${activeKey.key_prefix}…` : 'No key'}</span>}
@@ -218,8 +203,12 @@ export default function Integrations() {
           </div>
         </section>
 
+        <StoreCard provider="google_play" integration={integrations ? integrations.google_play ?? null : undefined} onChanged={load} />
+        <StoreCard provider="app_store" integration={integrations ? integrations.app_store ?? null : undefined} onChanged={load} />
+
         <p className="field-help">
-          Google Play Console and App Store Connect can't be connected yet. Until they can, send those numbers through the Custom API or add them by hand on Overall Income.
+          Store downloads all count as organic installs, because the stores don't say which came from ads. If you also typed those days in by hand on
+          Overall Income, delete the hand-entered ones so nothing is counted twice.
         </p>
       </div>
     </>

@@ -36,7 +36,7 @@ export const relativeDay = (iso) => {
 };
 
 export const METRIC_COLUMNS = 'day, source, revenue, fees, ad_spend, organic_downloads, paid_downloads, purchases, active_users';
-export const SOURCE_LABELS = { manual: 'Entered by hand', sample: 'Sample data', stripe: 'Stripe', custom_api: 'Custom API' };
+export const SOURCE_LABELS = { manual: 'Entered by hand', sample: 'Sample data', stripe: 'Stripe', custom_api: 'Custom API', app_store: 'App Store', google_play: 'Google Play' };
 
 // All sources for the last `days` days; RLS limits the rows to the signed-in user
 export function fetchMetrics(days) {

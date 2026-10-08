@@ -89,7 +89,7 @@ export function Privacy() {
       <ul>
         <li><strong>Your account:</strong> email address, password (stored only as a secure hash) and, if you give it, your name. Needed to run your account.</li>
         <li><strong>Your profile:</strong> experience, profit target, goals, currency and launch checklist ticks. Used to tailor plans and remember your progress.</li>
-        <li><strong>Your numbers:</strong> the daily figures and ad campaigns you enter, send through the Custom API or import from Stripe. If you connect Stripe, we keep your read-only key encrypted and import daily totals, not your customers' details.</li>
+        <li><strong>Your numbers:</strong> the daily figures and ad campaigns you enter, send through the Custom API, import as a CSV report, or import from Stripe, the App Store or Google Play. If you connect one of these, we keep your read-only key encrypted and import daily totals, not your customers' details.</li>
         <li><strong>Plans and questions:</strong> the plans you ask for and the questions you ask, plus a daily count of requests to enforce the limit.</li>
         <li><strong>Billing:</strong> your plan, its status and renewal date, and the Stripe customer reference. Stripe holds your card and invoice details.</li>
       </ul>
@@ -100,6 +100,7 @@ export function Privacy() {
         <li><strong>Supabase</strong> stores the database and runs sign-in, in the EU (Frankfurt).</li>
         <li><strong>Stripe</strong> takes payments and handles tax on them.</li>
         <li><strong>Anthropic</strong> writes plans and answers. Only when you ask for one, it receives a summary of your numbers, your campaigns and your profile answers; never your email address or keys. It doesn't use this to train its models.</li>
+        <li><strong>Apple</strong> and <strong>Google</strong>, only if you connect App Store Connect or Google Play: we read your sales and install reports from them with the key you gave us.</li>
         <li><strong>Cloudflare</strong> serves this website.</li>
         <li>Our <strong>email provider</strong> sends sign-up and password emails.</li>
         <li>The News page loads stories straight from <strong>Hacker News (Algolia)</strong>, which sees your browser's IP address when you open it.</li>

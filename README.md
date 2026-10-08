@@ -25,6 +25,7 @@ Everything below lives in [`supabase/`](supabase/) and is already applied to the
 | `migrations/` | Tables, row level security, sign-up trigger and database functions, in the order they were applied |
 | `functions/ai-advisor` | Answers advisor questions with Claude, using the caller's own profile and metrics |
 | `functions/stripe-sync` | Connects a user's Stripe restricted key (stored in Vault) and imports their daily revenue |
+| `functions/store-sync` | Connects App Store Connect (API key, Sales role) or Google Play (service account + report bucket), stored in Vault, and imports daily downloads, purchases and revenue |
 | `functions/billing` | Premium checkout, the Stripe billing portal and on-demand subscription checks |
 | `functions/stripe-webhook` | Keeps plans in step with Stripe: new subscriptions, renewals, failed payments, cancellations |
 
@@ -44,7 +45,7 @@ All tables are per user; RLS lets each user see only their own rows.
 
 - `profiles` – onboarding answers (created by a trigger on sign-up)
 - `subscriptions` – plan, written only by the billing functions from Stripe; clients can read it, and `choose_plan()` can only switch an old demo plan to Free. Admin Premium (no billing, no end date) is set by hand in the SQL editor: `select public.set_admin_premium('you@example.com');`, and `select public.set_admin_premium('you@example.com', false);` turns it off
-- `daily_metrics` – one row per day and source (`manual`, `sample`, `stripe`, `custom_api`)
+- `daily_metrics` – one row per day and source (`manual`, `sample`, `stripe`, `custom_api`, `app_store`, `google_play`)
 - `ad_campaigns` – campaigns tracked in the Ad Manager
 - `integrations`, `api_keys` – connection status and hashed Custom API keys
 - `ai_usage` – advisor requests, for the 30-per-day cap
@@ -64,4 +65,5 @@ Up to 366 days per request. A day you send again replaces the earlier Custom API
 
 ## Not real yet
 
-- **Google Play, App Store and ad network accounts** can't be connected yet; use manual entry or the Custom API.
+- **Ad network accounts** can't be linked directly (each network has to approve API access first). Import each network's campaign report as CSV in the Ad Manager instead.
+- **Store imports** convert proceeds with ECB daily reference rates, which differ a little from what the stores pay out; Google's fee is estimated from the rate you pick.
