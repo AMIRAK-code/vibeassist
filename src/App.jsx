@@ -21,7 +21,7 @@ const PremiumPaywall = lazy(() => import('./pages/PremiumPaywall'));
 const Integrations = lazy(() => import('./pages/Integrations'));
 const Plan = lazy(() => import('./pages/Plan'));
 const AIAnalyzer = lazy(() => import('./pages/AIAnalyzer'));
-const LaunchGuides = lazy(() => import('./pages/LaunchGuides'));
+const Publishing = lazy(() => import('./pages/Publishing'));
 const CampaignOverview = lazy(() => import('./pages/CampaignOverview'));
 const News = lazy(() => import('./pages/News'));
 const Settings = lazy(() => import('./pages/Settings'));
@@ -265,7 +265,7 @@ function App() {
 
             <Route element={<AuthRoute />}>
               <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/publishing" element={<LaunchGuides />} />
+              <Route path="/publishing" element={<Publishing />} />
               <Route path="/newsletter" element={<News />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/premium/welcome" element={<CheckoutReturn />} />
