@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowDown, ArrowUp, Download, Plus } from 'lucide-react';
+import { ArrowDown, ArrowUp, Download, Plus, Upload, X } from 'lucide-react';
 import { useAuth } from '../context/auth';
 import { useToast } from '../components/ui/toast-context';
 import { friendlyError, supabase } from '../lib/supabase';
@@ -9,6 +9,7 @@ import { downloadCsv } from '../lib/csv';
 import { usePersistentState } from '../lib/usePersistentState';
 import PageHeader from '../components/ui/PageHeader';
 import Notice from '../components/ui/Notice';
+import CampaignImport from '../components/CampaignImport';
 
 const emptyCampaign = { network: 'meta', name: '', status: 'active', spend: '', revenue: '', installs: '' };
 const roasOf = (c) => (Number(c.spend) > 0 ? (Number(c.revenue) / Number(c.spend)) * 100 : null);
@@ -122,7 +123,7 @@ function CampaignForm({ initial, currency, onSave, onCancel, saving, error, conf
 }
 
 export default function CampaignOverview() {
-  const { profile, user } = useAuth();
+  const { profile, user, refreshAccount } = useAuth();
   const toast = useToast();
   const currency = profile?.currency ?? 'USD';
   const [campaigns, setCampaigns] = useState(null);
@@ -135,6 +136,12 @@ export default function CampaignOverview() {
   const recreate = useRef(false);
   const [statusFilter, setStatusFilter] = usePersistentState('campaign-filter', 'all');
   const [sort, setSort] = usePersistentState('campaign-sort', { key: 'spend', dir: 'desc' });
+  const [networkFilter, setNetworkFilter] = usePersistentState('campaign-network', 'all');
+  const [importNetwork, setImportNetwork] = useState(null);
+  const [targetDraft, setTargetDraft] = useState(null); // string while editing the target CAC
+  const [targetSaving, setTargetSaving] = useState(false);
+  const tableRef = useRef(null);
+  const importRef = useRef(null);
 
   const load = useCallback(async () => {
     const { data, error } = await supabase.from('ad_campaigns').select('*').order('created_at');
@@ -148,19 +155,81 @@ export default function CampaignOverview() {
   }, [load]);
 
   const visible = useMemo(() => {
-    const list = (campaigns ?? []).filter((c) => statusFilter === 'all' || c.status === statusFilter);
+    const list = (campaigns ?? []).filter((c) => (statusFilter === 'all' || c.status === statusFilter) && (networkFilter === 'all' || c.network === networkFilter));
     const column = COLUMNS.find((c) => c.key === sort.key) ?? COLUMNS[1];
     return [...list].sort((a, b) => {
       const x = column.value(a), y = column.value(b);
       const order = x < y ? -1 : x > y ? 1 : 0;
       return sort.dir === 'asc' ? order : -order;
     });
-  }, [campaigns, statusFilter, sort]);
+  }, [campaigns, statusFilter, networkFilter, sort]);
 
   const all = campaigns ?? [];
   const totals = all.reduce((t, c) => ({ spend: t.spend + Number(c.spend), revenue: t.revenue + Number(c.revenue), installs: t.installs + c.installs }), { spend: 0, revenue: 0, installs: 0 });
   const roas = roasOf(totals);
   const cac = cacOf(totals);
+  const targetCac = profile?.target_cac === null || profile?.target_cac === undefined ? null : Number(profile.target_cac);
+  const money = (v) => formatMoneyExact(v, currency);
+
+  // One row per network, worked out from the campaigns tracked for it
+  const networks = Object.entries(AD_NETWORKS).map(([key, info]) => {
+    const list = all.filter((c) => c.network === key);
+    const sums = list.reduce((t, c) => ({ spend: t.spend + Number(c.spend), revenue: t.revenue + Number(c.revenue), installs: t.installs + c.installs }), { spend: 0, revenue: 0, installs: 0 });
+    const status = !list.length ? 'none' : list.some((c) => c.status === 'active') ? 'active' : list.some((c) => c.status === 'paused') ? 'paused' : 'ended';
+    return { key, ...info, count: list.length, status, ...sums, roas: roasOf(sums) };
+  });
+
+  const manage = (key) => {
+    setNetworkFilter(key);
+    setStatusFilter('all');
+    requestAnimationFrame(() => tableRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }));
+  };
+
+  const openImport = (key) => {
+    setImportNetwork(key);
+    requestAnimationFrame(() => importRef.current?.scrollIntoView({ block: 'start' }));
+  };
+
+  const onImported = async ({ network, updated, inserted, failed, skipped }) => {
+    setImportNetwork(null);
+    await load();
+    const parts = [`${updated.length} updated`, `${inserted.length} added`];
+    if (skipped) parts.push(`${skipped} skipped`);
+    if (failed) parts.push(`${failed} failed`);
+    toast.show({
+      message: `${AD_NETWORKS[network].short} import: ${parts.join(', ')}.`,
+      tone: failed ? 'error' : undefined,
+      actionLabel: updated.length || inserted.length ? 'Undo' : undefined,
+      onAction: async () => {
+        const restores = updated.map((c) => supabase.from('ad_campaigns').update({ spend: c.spend, revenue: c.revenue, installs: c.installs, status: c.status }).eq('id', c.id));
+        const removal = inserted.length ? [supabase.from('ad_campaigns').delete().in('id', inserted)] : [];
+        const results = await Promise.all([...restores, ...removal]);
+        toast.show(results.some((r) => r.error)
+          ? { message: 'Some campaigns could not be put back. Check them in the table.', tone: 'error' }
+          : { message: 'Import undone.' });
+        await load();
+      },
+    });
+  };
+
+  const saveTarget = async (e) => {
+    e.preventDefault();
+    const value = targetDraft.trim() === '' ? null : Number(targetDraft);
+    if (value !== null && (!Number.isFinite(value) || value < 0)) {
+      toast.show({ message: 'Use zero or more for the target.', tone: 'error' });
+      return;
+    }
+    setTargetSaving(true);
+    const { error } = await supabase.from('profiles').update({ target_cac: value }).eq('id', user.id);
+    setTargetSaving(false);
+    if (error) {
+      toast.show({ message: friendlyError(error, 'Could not save your target. Try again; what you typed is still there.'), tone: 'error' });
+      return;
+    }
+    setTargetDraft(null);
+    refreshAccount();
+    toast.show({ message: value === null ? 'Target cost per install removed.' : `Target cost per install set to ${money(value)}.` });
+  };
 
   const toggleSort = (key) => setSort((s) => ({ key, dir: s.key === key && s.dir === 'desc' ? 'asc' : 'desc' }));
 
@@ -258,7 +327,7 @@ export default function CampaignOverview() {
     <>
       <PageHeader
         title="Centralized Ad Manager"
-        description="Spend, revenue and installs for each ad campaign. Enter results from each network's dashboard; accounts can't be linked yet."
+        description="Meta, Google, YouTube, X, Apple Search Ads and TikTok in one place. Add campaigns by hand or import each network's campaign report."
       >
         {all.length > 0 && <button type="button" className="btn btn-secondary" onClick={exportCsv}><Download aria-hidden="true" /> Export CSV</button>}
         <button type="button" className="btn btn-primary" onClick={() => { setFormError(''); setEditing('new'); }} disabled={editing !== null}>
@@ -280,25 +349,116 @@ export default function CampaignOverview() {
         editing !== 'new' && (
           <div className="card empty-state section">
             <h2>No campaigns yet</h2>
-            <p>Add a campaign with its total spend, the revenue it brought in and its installs to see return on ad spend and cost per install.</p>
+            <p>Add a campaign with its total spend, the revenue it brought in and its installs, or import a report from one of the networks below, to see return on ad spend and cost per install.</p>
             <button type="button" className="btn btn-primary" style={{ marginTop: 16 }} onClick={() => setEditing('new')}><Plus aria-hidden="true" /> Add your first campaign</button>
           </div>
         )
       ) : (
-        <>
-          <div className="stat-grid section" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
-            <div className="card stat"><p className="stat-label">Total spend</p><p className="stat-value">{formatMoneyExact(totals.spend, currency)}</p><p className="stat-change">{all.length} {all.length === 1 ? 'campaign' : 'campaigns'}</p></div>
-            <div className="card stat">
-              <p className="stat-label">Return on ad spend</p>
-              <p className="stat-value">{roas === null ? '—' : formatPercent(roas)}</p>
-              <p className={`stat-change ${roas === null ? '' : roas >= 100 ? 'stat-change--up' : 'stat-change--down'}`}>{roas === null ? 'Needs spend' : roas >= 100 ? 'Revenue covers spend' : 'Spending more than it earns'}</p>
-            </div>
-            <div className="card stat"><p className="stat-label">Cost per install</p><p className="stat-value">{cac === null ? '—' : formatMoneyExact(cac, currency)}</p><p className="stat-change">{cac === null ? 'Needs installs' : `${formatCount(totals.installs)} installs`}</p></div>
+        <div className="stat-grid section" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
+          <div className="card stat"><p className="stat-label">Total Ad Spend</p><p className="stat-value">{money(totals.spend)}</p><p className="stat-change">{all.length} {all.length === 1 ? 'campaign' : 'campaigns'}</p></div>
+          <div className="card stat">
+            <p className="stat-label">Avg. ROAS</p>
+            <p className="stat-value">{roas === null ? '—' : formatPercent(roas)}</p>
+            <p className={`stat-change ${roas === null ? '' : roas >= 100 ? 'stat-change--up' : 'stat-change--down'}`}>{roas === null ? 'Needs spend' : roas >= 100 ? 'Healthy: revenue covers spend' : 'Spending more than it earns'}</p>
           </div>
+          <div className="card stat">
+            <p className="stat-label">Avg. CAC (cost per install)</p>
+            <p className="stat-value">{cac === null ? '—' : money(cac)}</p>
+            <p className={`stat-change ${targetCac === null || cac === null ? '' : cac <= targetCac ? 'stat-change--up' : 'stat-change--down'}`}>
+              {targetCac === null
+                ? (cac === null ? 'Needs installs' : `${formatCount(totals.installs)} installs`)
+                : cac === null
+                  ? `Target: ${money(targetCac)}`
+                  : cac <= targetCac ? `Target: ${money(targetCac)} · on target` : `Target: ${money(targetCac)} · ${money(cac - targetCac)} over`}
+            </p>
+            {targetDraft === null ? (
+              <button type="button" className="btn btn-ghost btn-sm stat-action" onClick={() => setTargetDraft(targetCac === null ? '' : String(targetCac))}>
+                {targetCac === null ? 'Set a target' : 'Edit target'}
+              </button>
+            ) : (
+              <form className="inline-form" onSubmit={saveTarget}>
+                <label className="visually-hidden" htmlFor="target-cac">Target cost per install ({currency})</label>
+                <input
+                  id="target-cac"
+                  className="input-field input-sm"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  inputMode="decimal"
+                  placeholder="1.50"
+                  value={targetDraft}
+                  onChange={(e) => setTargetDraft(e.target.value)}
+                  autoFocus
+                />
+                <button type="submit" className="btn btn-secondary btn-sm" disabled={targetSaving} aria-busy={targetSaving}>{targetSaving ? 'Saving…' : 'Save'}</button>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => setTargetDraft(null)} disabled={targetSaving}>Cancel</button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
 
-          <section className="section" aria-labelledby="campaigns-title">
-            <div className="section-header">
-              <h2 id="campaigns-title">All campaigns</h2>
+      {campaigns !== null && (
+        <section className="section" aria-labelledby="networks-title">
+          <div className="section-header">
+            <h2 id="networks-title">Connected Ad Networks</h2>
+            <span className="field-help">Linking ad accounts directly needs each network's approval. Until then, import each network's campaign report.</span>
+          </div>
+          {importNetwork && (
+            <div ref={importRef} style={{ marginBottom: 12 }}>
+              <CampaignImport
+                key={importNetwork}
+                network={importNetwork}
+                campaigns={all}
+                currency={currency}
+                onImported={onImported}
+                onCancel={() => setImportNetwork(null)}
+              />
+            </div>
+          )}
+          <ul className="card card--flush network-list">
+            {networks.map((n) => (
+              <li key={n.key}>
+                <span className="network-dot" style={{ background: n.color }} aria-hidden="true" />
+                <div className="network-body">
+                  <strong>{n.label}</strong>
+                  <span className="field-help">
+                    {n.status === 'none'
+                      ? 'Not set up'
+                      : `${STATUS_LABEL[n.status]} • Spend: ${money(n.spend)} • ${formatCount(n.installs)} installs${n.roas === null ? '' : ` • ROAS ${formatPercent(n.roas)}`}`}
+                  </span>
+                </div>
+                <div className="network-actions">
+                  {n.count > 0 && (
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => manage(n.key)}>
+                      Manage<span className="visually-hidden"> {n.label} campaigns</span>
+                    </button>
+                  )}
+                  <button type="button" className="btn btn-secondary btn-sm" onClick={() => openImport(n.key)} disabled={importNetwork === n.key}>
+                    <Upload aria-hidden="true" /> Import CSV<span className="visually-hidden"> from {n.label}</span>
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {all.length > 0 && (
+        <section className="section" aria-labelledby="campaigns-title" ref={tableRef}>
+          <div className="section-header">
+            <h2 id="campaigns-title">{networkFilter === 'all' ? 'All campaigns' : `${AD_NETWORKS[networkFilter].short} campaigns`}</h2>
+            <div className="page-actions">
+              {networkFilter !== 'all' && (
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => setNetworkFilter('all')}>
+                  <X aria-hidden="true" /> Show all networks
+                </button>
+              )}
+              <label className="visually-hidden" htmlFor="network-filter">Network</label>
+              <select id="network-filter" className="input-field input-sm" value={networkFilter} onChange={(e) => setNetworkFilter(e.target.value)}>
+                <option value="all">All networks</option>
+                {Object.entries(AD_NETWORKS).map(([key, network]) => <option key={key} value={key}>{network.short}</option>)}
+              </select>
               <div className="segmented" role="group" aria-label="Show">
                 {['all', ...CAMPAIGN_STATUSES].map((s) => (
                   <button key={s} type="button" aria-pressed={statusFilter === s} onClick={() => setStatusFilter(s)}>
@@ -307,68 +467,68 @@ export default function CampaignOverview() {
                 ))}
               </div>
             </div>
-            <div className="card card--flush">
-              <div className="table-wrap">
-                <table className="table table-stack">
-                  <thead>
-                    <tr>
-                      {COLUMNS.map((col) => (
-                        <th key={col.key} scope="col" className={col.num ? 'num' : undefined} aria-sort={sort.key === col.key ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'} title={col.title}>
-                          <button type="button" onClick={() => toggleSort(col.key)}>
-                            {col.label}
-                            {sort.key === col.key && (sort.dir === 'asc' ? <ArrowUp size={13} aria-hidden="true" /> : <ArrowDown size={13} aria-hidden="true" />)}
-                          </button>
-                        </th>
-                      ))}
-                      <th scope="col" className="actions"><span className="visually-hidden">Actions</span></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {visible.length === 0 && (
-                      <tr><td colSpan={COLUMNS.length + 1} className="muted">No {STATUS_LABEL[statusFilter]?.toLowerCase()} campaigns.</td></tr>
-                    )}
-                    {visible.map((c) => {
-                      const r = roasOf(c);
-                      if (editing === c.id) {
-                        return (
-                          <tr key={c.id}><td colSpan={COLUMNS.length + 1} style={{ padding: 12 }}>
-                            <CampaignForm initial={toForm(c)} currency={currency} onSave={save} onCancel={closeForm} saving={saving} error={formError} conflict={conflict} onResolve={resolveConflict} />
-                          </td></tr>
-                        );
-                      }
+          </div>
+          <div className="card card--flush">
+            <div className="table-wrap">
+              <table className="table table-stack">
+                <thead>
+                  <tr>
+                    {COLUMNS.map((col) => (
+                      <th key={col.key} scope="col" className={col.num ? 'num' : undefined} aria-sort={sort.key === col.key ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'} title={col.title}>
+                        <button type="button" onClick={() => toggleSort(col.key)}>
+                          {col.label}
+                          {sort.key === col.key && (sort.dir === 'asc' ? <ArrowUp size={13} aria-hidden="true" /> : <ArrowDown size={13} aria-hidden="true" />)}
+                        </button>
+                      </th>
+                    ))}
+                    <th scope="col" className="actions"><span className="visually-hidden">Actions</span></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visible.length === 0 && (
+                    <tr><td colSpan={COLUMNS.length + 1} className="muted">No campaigns match these filters.</td></tr>
+                  )}
+                  {visible.map((c) => {
+                    const r = roasOf(c);
+                    if (editing === c.id) {
                       return (
-                        <tr key={c.id}>
-                          <td>
-                            <strong>{c.name}</strong>
-                            <div className="field-help">{AD_NETWORKS[c.network].label} · <span className={`badge ${c.status === 'active' ? 'badge--success' : ''}`}>{STATUS_LABEL[c.status]}</span></div>
-                          </td>
-                          <td className="num" data-label="Spend">{formatMoneyExact(c.spend, currency)}</td>
-                          <td className="num" data-label="Revenue">{formatMoneyExact(c.revenue, currency)}</td>
-                          <td className="num" data-label="ROAS"><span className={r === null ? '' : r >= 100 ? 'text-up' : 'text-down'}>{r === null ? '—' : formatPercent(r)}</span></td>
-                          <td className="num" data-label="Installs">{formatCount(c.installs)}</td>
-                          <td className="num" data-label="Cost / install">{cacOf(c) === null ? '—' : formatMoneyExact(cacOf(c), currency)}</td>
-                          <td className="actions">
-                            {c.status !== 'ended' && (
-                              <button type="button" className="btn btn-ghost btn-sm" onClick={() => toggleStatus(c)}>
-                                {c.status === 'active' ? 'Pause' : 'Resume'}<span className="visually-hidden"> {c.name}</span>
-                              </button>
-                            )}
-                            <button type="button" className="btn btn-ghost btn-sm" onClick={() => startEdit(c)} disabled={editing !== null}>
-                              Edit<span className="visually-hidden"> {c.name}</span>
-                            </button>
-                            <button type="button" className="btn btn-ghost btn-sm" onClick={() => remove(c)}>
-                              Delete<span className="visually-hidden"> {c.name}</span>
-                            </button>
-                          </td>
-                        </tr>
+                        <tr key={c.id}><td colSpan={COLUMNS.length + 1} style={{ padding: 12 }}>
+                          <CampaignForm initial={toForm(c)} currency={currency} onSave={save} onCancel={closeForm} saving={saving} error={formError} conflict={conflict} onResolve={resolveConflict} />
+                        </td></tr>
                       );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                    }
+                    return (
+                      <tr key={c.id}>
+                        <td>
+                          <strong>{c.name}</strong>
+                          <div className="field-help">{AD_NETWORKS[c.network].label} · <span className={`badge ${c.status === 'active' ? 'badge--success' : ''}`}>{STATUS_LABEL[c.status]}</span></div>
+                        </td>
+                        <td className="num" data-label="Spend">{formatMoneyExact(c.spend, currency)}</td>
+                        <td className="num" data-label="Revenue">{formatMoneyExact(c.revenue, currency)}</td>
+                        <td className="num" data-label="ROAS"><span className={r === null ? '' : r >= 100 ? 'text-up' : 'text-down'}>{r === null ? '—' : formatPercent(r)}</span></td>
+                        <td className="num" data-label="Installs">{formatCount(c.installs)}</td>
+                        <td className="num" data-label="Cost / install">{cacOf(c) === null ? '—' : formatMoneyExact(cacOf(c), currency)}</td>
+                        <td className="actions">
+                          {c.status !== 'ended' && (
+                            <button type="button" className="btn btn-ghost btn-sm" onClick={() => toggleStatus(c)}>
+                              {c.status === 'active' ? 'Pause' : 'Resume'}<span className="visually-hidden"> {c.name}</span>
+                            </button>
+                          )}
+                          <button type="button" className="btn btn-ghost btn-sm" onClick={() => startEdit(c)} disabled={editing !== null}>
+                            Edit<span className="visually-hidden"> {c.name}</span>
+                          </button>
+                          <button type="button" className="btn btn-ghost btn-sm" onClick={() => remove(c)}>
+                            Delete<span className="visually-hidden"> {c.name}</span>
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
-          </section>
-        </>
+          </div>
+        </section>
       )}
     </>
   );
