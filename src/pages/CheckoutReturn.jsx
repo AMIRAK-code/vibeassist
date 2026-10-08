@@ -8,8 +8,8 @@ import Notice from '../components/ui/Notice';
 
 const NEXT = [
   { to: '/plan', icon: ListChecks, title: 'Write your first plan', text: 'Claude reads your numbers and suggests three to five steps for this week.' },
-  { to: '/data-sources', icon: Plug, title: 'Import from Stripe', text: 'Pull in 90 days of revenue so the plan has real numbers to work with.' },
-  { to: '/campaigns', icon: Megaphone, title: 'Track a campaign', text: 'See which ads pay for themselves.' },
+  { to: '/integrations', icon: Plug, title: 'Import from Stripe', text: 'Pull in 90 days of revenue so the plan has real numbers to work with.' },
+  { to: '/ads', icon: Megaphone, title: 'Track a campaign', text: 'See which ads pay for themselves.' },
 ];
 const RETRIES = 5; // card payments usually confirm within a few seconds
 

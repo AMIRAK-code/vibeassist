@@ -9,10 +9,10 @@ import BrandMark from './BrandMark';
 // VibeAssist area, but nothing in here is interactive, so it is exposed to assistive
 // technology as a single image with a description.
 const SIDEBAR = [
-  { icon: LayoutDashboard, label: 'Overview', active: true },
-  { icon: ListChecks, label: 'Plan' },
-  { icon: Megaphone, label: 'Campaigns' },
-  { icon: Plug, label: 'Data sources' },
+  { icon: LayoutDashboard, label: 'Overall Income', active: true },
+  { icon: Plug, label: 'Integrations' },
+  { icon: ListChecks, label: 'Weekly Plan' },
+  { icon: Megaphone, label: 'Ad Manager' },
 ];
 
 const TABS = [
@@ -34,7 +34,7 @@ const NOTES = [
 ];
 
 const DESCRIPTION =
-  'Illustration of the VibeAssist workspace: a sidebar with Overview, Plan, Campaigns and Data sources, ' +
+  'Illustration of the VibeAssist workspace: a sidebar with Overall Income, Integrations, Weekly Plan and Ad Manager, ' +
   "and this week's plan with three next steps drawn from your revenue, ads and launch guidance.";
 
 export default function WorkspacePreview({ id }) {

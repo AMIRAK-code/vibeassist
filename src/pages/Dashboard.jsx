@@ -122,7 +122,7 @@ export default function Dashboard() {
   const syncStripe = () => run('sync', async () => {
     const { data, status } = await callFunction('stripe-sync', { action: 'sync' });
     if (status === 200) toast.show({ message: `Stripe synced: ${formatCount(data.transactions)} transactions across ${data.days} days.` });
-    else toast.show({ message: data?.error ?? 'Stripe sync failed. Try again from Data sources.', tone: 'error' });
+    else toast.show({ message: data?.error ?? 'Stripe sync failed. Try again from Integrations.', tone: 'error' });
     await load();
   });
 
@@ -261,7 +261,7 @@ export default function Dashboard() {
               icon={Plug}
               title="Import from Stripe"
               text="Pull the last 90 days of revenue, refunds and fees with a read-only key."
-              action={<Link className="btn btn-secondary" to="/data-sources">{hasPremium ? 'Connect Stripe' : 'See how (Premium)'}</Link>}
+              action={<Link className="btn btn-secondary" to="/integrations">{hasPremium ? 'Connect Stripe' : 'See how (Premium)'}</Link>}
             />
             <StartOption
               icon={FlaskConical}

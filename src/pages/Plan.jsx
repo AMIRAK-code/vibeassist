@@ -407,7 +407,7 @@ export default function Plan() {
 
             {allDone && (
               <Notice tone="success" title="Every step is done">
-                Add this week's numbers on the Overview, then write next week's plan.
+                Add this week's numbers on Overall Income, then write next week's plan.
               </Notice>
             )}
 

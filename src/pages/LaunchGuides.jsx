@@ -65,7 +65,7 @@ export default function LaunchGuides() {
 
   return (
     <>
-      <PageHeader title="Launch guides" description="What each store asks for before you publish, with links to the official rules. Tick items off as you go." />
+      <PageHeader title="Publishing & Legal Center" description="What each store asks for before you publish, with links to the official rules. Tick items off as you go." />
 
       <div className="section-header">
         <div className="segmented" role="group" aria-label="Platform">

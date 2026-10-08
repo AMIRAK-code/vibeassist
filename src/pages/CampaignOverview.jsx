@@ -257,7 +257,7 @@ export default function CampaignOverview() {
   return (
     <>
       <PageHeader
-        title="Campaigns"
+        title="Centralized Ad Manager"
         description="Spend, revenue and installs for each ad campaign. Enter results from each network's dashboard; accounts can't be linked yet."
       >
         {all.length > 0 && <button type="button" className="btn btn-secondary" onClick={exportCsv}><Download aria-hidden="true" /> Export CSV</button>}

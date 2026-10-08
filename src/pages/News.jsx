@@ -57,7 +57,7 @@ export default function News() {
 
   return (
     <>
-      <PageHeader title="News" description="Recent Hacker News discussions about shipping and selling apps. Stories open on their original sites." />
+      <PageHeader title="Vibecoding News & Community" description="Recent Hacker News discussions about shipping and selling apps. Stories open on their original sites." />
 
       <div className="section-header">
         <div className="segmented" role="group" aria-label="Topic">
