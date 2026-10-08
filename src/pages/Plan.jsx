@@ -1,15 +1,15 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { Check, Copy, MessageSquare, RotateCcw, Trash2, X } from 'lucide-react';
 import { useAuth } from '../context/auth';
 import { useToast } from '../components/ui/toast-context';
 import { callFunction, friendlyError, supabase } from '../lib/supabase';
-import { fetchMetrics, formatDay, SOURCE_LABELS, summarize } from '../lib/metrics';
-import { formatCount, formatMoney } from '../lib/format';
+import { fetchMetrics, formatDay, summarize } from '../lib/metrics';
 import { usePersistentState } from '../lib/usePersistentState';
-import { experienceLabel, PERIODS, PLAN_FOCUSES, profitLabel } from '../lib/options';
+import { PERIODS, PLAN_FOCUSES } from '../lib/options';
 import PageHeader from '../components/ui/PageHeader';
 import Notice from '../components/ui/Notice';
+import Elapsed from '../components/ui/Elapsed';
+import ContextPreview from '../components/ContextPreview';
 
 const DAILY_LIMIT = 30;
 const EFFORT_LABELS = { small: 'Under an hour', medium: 'A few hours', large: 'A day or more' };
@@ -30,15 +30,6 @@ function planAsText(plan) {
     '',
     `Written by Claude (${plan.model}) in VibeAssist.`,
   ].join('\n');
-}
-
-function Elapsed({ since }) {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(timer);
-  }, []);
-  return <span>{Math.max(0, Math.round((now - since) / 1000))}s</span>;
 }
 
 function Step({ step, onStatus }) {
@@ -79,31 +70,6 @@ function Step({ step, onStatus }) {
         </button>
       </div>
     </li>
-  );
-}
-
-function ContextPreview({ profile, summary, campaigns, period }) {
-  const { current, sources } = summary;
-  const currency = profile?.currency ?? 'USD';
-  return (
-    <details className="context-preview">
-      <summary>What Claude will see</summary>
-      <dl>
-        <div><dt>Numbers</dt><dd>
-          Last {period} days and the {period} before. This period: {formatMoney(current.revenue, currency)} revenue, {formatCount(current.downloads)} downloads,
-          {' '}{formatMoney(current.adSpend, currency)} ad spend ({current.daysWithData} days with data).
-        </dd></div>
-        <div><dt>Sources</dt><dd>{sources.length ? sources.map((s) => SOURCE_LABELS[s] ?? s).join(', ') : 'none yet'}</dd></div>
-        <div><dt>Campaigns</dt><dd>{campaigns} tracked</dd></div>
-        <div><dt>About you</dt><dd>
-          {experienceLabel(profile?.experience)}; target {profitLabel(profile?.profit_expectancy)};
-          {' '}goals: {profile?.goals?.length ? profile.goals.join(', ') : 'none set'}. <Link to="/settings">Edit</Link>
-        </dd></div>
-      </dl>
-      <p className="field-help">
-        Sent to Anthropic's Claude only when you ask for a plan or ask a question. Your email and Stripe keys are never included.
-      </p>
-    </details>
   );
 }
 
@@ -265,7 +231,7 @@ export default function Plan() {
   if (plans === null) {
     return (
       <>
-        <PageHeader title="Plan" description="A weekly plan written by Claude from your numbers. Keep the steps that make sense and tick them off." />
+        <PageHeader title="Weekly Plan" description="A weekly plan written by Claude from your numbers. Keep the steps that make sense and tick them off." />
         <div className="skeleton" style={{ height: 180 }} aria-busy="true" aria-label="Loading your plans" />
       </>
     );
@@ -275,7 +241,7 @@ export default function Plan() {
 
   return (
     <>
-      <PageHeader title="Plan" description="A weekly plan written by Claude from your numbers. Keep the steps that make sense and tick them off." />
+      <PageHeader title="Weekly Plan" description="A weekly plan written by Claude from your numbers. Keep the steps that make sense and tick them off." />
 
       {loadError && (
         <div className="section"><Notice tone="error" actions={<button type="button" className="btn btn-secondary btn-sm" onClick={load}>Try again</button>}>{loadError}</Notice></div>
