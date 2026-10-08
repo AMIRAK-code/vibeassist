@@ -9,6 +9,7 @@ import { buildSampleRows, fetchMetrics, formatDay, METRIC_COLUMNS, relativeDay, 
 import { formatCompactCount, formatCompactMoney, formatCount, formatMoney, formatMoneyExact, formatPercent } from '../lib/format';
 import { downloadCsv } from '../lib/csv';
 import { usePersistentState } from '../lib/usePersistentState';
+import { SYNCABLE, syncAllConnected } from '../lib/integrations';
 import { PERIODS } from '../lib/options';
 import PageHeader from '../components/ui/PageHeader';
 import Notice from '../components/ui/Notice';
@@ -66,7 +67,7 @@ export default function Dashboard() {
   const [metric, setMetric] = usePersistentState('overview-metric', 'all');
   const [rows, setRows] = useState(null); // null while loading
   const [totalRows, setTotalRows] = useState(null);
-  const [stripe, setStripe] = useState(null);
+  const [connections, setConnections] = useState([]); // connected sources that can be synced
   const [latestPlan, setLatestPlan] = useState(null);
   const [loadError, setLoadError] = useState('');
   const [busy, setBusy] = useState('');
@@ -77,7 +78,7 @@ export default function Dashboard() {
     const [metrics, count, integration, plan] = await Promise.all([
       fetchMetrics(period * 2),
       supabase.from('daily_metrics').select('day', { count: 'exact', head: true }),
-      supabase.from('integrations').select('status, last_synced_at, account_label').eq('provider', 'stripe').maybeSingle(),
+      supabase.from('integrations').select('provider, status, last_synced_at, account_label').in('provider', Object.keys(SYNCABLE)),
       hasPremium
         ? supabase.from('advisor_plans').select('id, created_at, plan_steps(status)').order('created_at', { ascending: false }).limit(1).maybeSingle()
         : Promise.resolve({ data: null }),
@@ -90,7 +91,7 @@ export default function Dashboard() {
     setLoadError('');
     setRows(metrics.data);
     setTotalRows(count.count ?? 0);
-    setStripe(integration.data?.status === 'connected' ? integration.data : null);
+    setConnections((integration.data ?? []).filter((c) => c.status === 'connected'));
     setLatestPlan(plan.data ?? null);
     return true;
   }, [period, hasPremium]);
@@ -131,13 +132,7 @@ export default function Dashboard() {
   // Pulls fresh numbers from every connected source, then reloads everything on the page.
   // Sources that push their own numbers (Custom API, manual entry) just get reloaded.
   const refreshAll = () => run('refresh', async () => {
-    const outcomes = [];
-    if (stripe) {
-      const { data, status } = await callFunction('stripe-sync', { action: 'sync' });
-      outcomes.push(status === 200
-        ? { ok: true, text: `Stripe: ${formatCount(data.transactions)} transactions` }
-        : { ok: false, text: `Stripe: ${data?.error ?? 'sync failed'}` });
-    }
+    const outcomes = await syncAllConnected(connections, callFunction);
     const loaded = await load();
     if (!loaded) {
       toast.show({ message: 'Could not reload your numbers. Check your connection and try again.', tone: 'error' });
@@ -151,10 +146,9 @@ export default function Dashboard() {
     });
   });
 
-  const syncStripe = () => run('sync', async () => {
-    const { data, status } = await callFunction('stripe-sync', { action: 'sync' });
-    if (status === 200) toast.show({ message: `Stripe synced: ${formatCount(data.transactions)} transactions across ${data.days} days.` });
-    else toast.show({ message: data?.error ?? 'Stripe sync failed. Try again from Integrations.', tone: 'error' });
+  const syncOne = (connection) => run(`sync-${connection.provider}`, async () => {
+    const [outcome] = await syncAllConnected([connection], callFunction);
+    toast.show({ message: outcome.text, tone: outcome.ok ? undefined : 'error' });
     await load();
   });
 
@@ -295,9 +289,9 @@ export default function Dashboard() {
             />
             <StartOption
               icon={Plug}
-              title="Import from Stripe"
-              text="Pull the last 90 days of revenue, refunds and fees with a read-only key."
-              action={<Link className="btn btn-secondary" to="/integrations">{hasPremium ? 'Connect Stripe' : 'See how (Premium)'}</Link>}
+              title="Import from your stores"
+              text="Pull the last 90 days from Stripe, the App Store or Google Play with a read-only key."
+              action={<Link className="btn btn-secondary" to="/integrations">{hasPremium ? 'Connect a source' : 'See how (Premium)'}</Link>}
             />
             <StartOption
               icon={FlaskConical}
@@ -331,15 +325,15 @@ export default function Dashboard() {
                 <button type="button" className="btn btn-ghost btn-sm" onClick={() => openEntry()}>Add the missing days</button>
               )}
             </div>
-            {stripe && (
-              <div className="continue-item">
-                <p className="stat-label">Stripe · {stripe.account_label}</p>
-                <p>{stripe.last_synced_at ? `Synced ${new Date(stripe.last_synced_at).toLocaleString()}` : 'Not synced yet'}</p>
-                <button type="button" className="btn btn-ghost btn-sm" onClick={syncStripe} disabled={Boolean(busy)} aria-busy={busy === 'sync'}>
-                  <RefreshCw aria-hidden="true" /> {busy === 'sync' ? 'Syncing…' : 'Sync now'}
+            {connections.map((c) => (
+              <div className="continue-item" key={c.provider}>
+                <p className="stat-label">{SYNCABLE[c.provider].label} · {c.account_label}</p>
+                <p>{c.last_synced_at ? `Synced ${new Date(c.last_synced_at).toLocaleString()}` : 'Not synced yet'}</p>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => syncOne(c)} disabled={Boolean(busy)} aria-busy={busy === `sync-${c.provider}`}>
+                  <RefreshCw aria-hidden="true" /> {busy === `sync-${c.provider}` ? 'Syncing…' : 'Sync now'}
                 </button>
               </div>
-            )}
+            ))}
             {hasPremium && (
               <div className="continue-item">
                 <p className="stat-label">Weekly plan</p>
@@ -478,7 +472,7 @@ export default function Dashboard() {
           <section className="section" aria-labelledby="entries-title">
             <div className="section-header">
               <h2 id="entries-title">Days you entered by hand</h2>
-              <span className="field-help">Stripe and Custom API days update on their own.</span>
+              <span className="field-help">Days from Stripe, the stores and the Custom API update on their own.</span>
             </div>
             {manualList.length === 0 ? (
               <div className="card"><p className="muted">No hand-entered days in the last {period * 2} days. Use “Add a day” for anything Stripe or your apps don't send.</p></div>

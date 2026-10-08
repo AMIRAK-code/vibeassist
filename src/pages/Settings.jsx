@@ -237,7 +237,7 @@ export default function Settings() {
             <select id="settings-currency" className="input-field" value={form.currency} onChange={(e) => update({ currency: e.target.value })}>
               {[...new Set([form.currency, ...CURRENCIES])].map((c) => <option key={c}>{c}</option>)}
             </select>
-            <span className="field-help">Labels amounts; it doesn't convert them. Connecting Stripe sets it to your Stripe currency.</span>
+            <span className="field-help">Labels amounts; it doesn't convert numbers you type in. Connecting Stripe sets it to your Stripe currency; App Store and Google Play imports are converted into it.</span>
           </div>
           <div className="field">
             <label className="field-label" htmlFor="settings-experience">Experience</label>
