@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Download, RefreshCw, PencilLine, FlaskConical, Plug, ArrowRight, ListChecks, Trash2 } from 'lucide-react';
+import { Plus, Download, RefreshCw, PencilLine, FlaskConical, Plug, ArrowRight, ListChecks, Trash2, DollarSign, PiggyBank, TrendingUp, Users } from 'lucide-react';
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { useAuth } from '../context/auth';
 import { useToast } from '../components/ui/toast-context';
@@ -13,8 +13,11 @@ import { PERIODS } from '../lib/options';
 import PageHeader from '../components/ui/PageHeader';
 import Notice from '../components/ui/Notice';
 import MetricEntryForm from '../components/MetricEntryForm';
+import GrowthChart, { ChartReadout } from '../components/GrowthChart';
+import { CHART_CHROME, SERIES_COLORS } from '../lib/chartColors';
 
 const CHART_METRICS = [
+  { key: 'all', label: 'All' },
   { key: 'revenue', label: 'Revenue', money: true },
   { key: 'profit', label: 'Profit', money: true },
   { key: 'downloads', label: 'Downloads' },
@@ -23,17 +26,21 @@ const CHART_METRICS = [
 
 
 // Percentage change against the previous period, or null when there is nothing to compare with
-const change = (current, previous) => (previous > 0 ? ((current - previous) / previous) * 100 : null);
+const change = (current, previous) => (current !== null && previous > 0 ? ((current - previous) / previous) * 100 : null);
 
-function Stat({ label, value, delta, periodDays, hint }) {
+function Stat({ label, icon: Icon, value, delta, periodDays, hint, note }) {
   const tone = delta === null || delta === undefined ? '' : delta >= 0 ? ' stat-change--up' : ' stat-change--down';
   return (
     <div className="card stat">
-      <p className="stat-label">{label}</p>
+      <div className="stat-head">
+        <p className="stat-label">{label}</p>
+        {Icon && <Icon className="stat-icon" aria-hidden="true" />}
+      </div>
       <p className="stat-value">{value}</p>
       <p className={`stat-change${tone}`}>
         {delta === null || delta === undefined ? hint ?? `No data for the ${periodDays} days before` : `${delta >= 0 ? '+' : ''}${delta.toFixed(1)}% vs previous ${periodDays} days`}
       </p>
+      {note && <p className="stat-note">{note}</p>}
     </div>
   );
 }
@@ -56,7 +63,7 @@ export default function Dashboard() {
   const toast = useToast();
   const currency = profile?.currency ?? 'USD';
   const [period, setPeriod] = usePersistentState('overview-period', 30);
-  const [metric, setMetric] = usePersistentState('overview-metric', 'revenue');
+  const [metric, setMetric] = usePersistentState('overview-metric', 'all');
   const [rows, setRows] = useState(null); // null while loading
   const [totalRows, setTotalRows] = useState(null);
   const [stripe, setStripe] = useState(null);
@@ -64,6 +71,7 @@ export default function Dashboard() {
   const [loadError, setLoadError] = useState('');
   const [busy, setBusy] = useState('');
   const [entry, setEntry] = useState(null); // { day } while the form is open
+  const [refreshedAt, setRefreshedAt] = useState(null);
 
   const load = useCallback(async () => {
     const [metrics, count, integration, plan] = await Promise.all([
@@ -77,13 +85,14 @@ export default function Dashboard() {
     if (metrics.error || count.error) {
       setLoadError(friendlyError(metrics.error ?? count.error, 'Could not load your numbers.'));
       setRows((previous) => previous ?? []);
-      return;
+      return false;
     }
     setLoadError('');
     setRows(metrics.data);
     setTotalRows(count.count ?? 0);
     setStripe(integration.data?.status === 'connected' ? integration.data : null);
     setLatestPlan(plan.data ?? null);
+    return true;
   }, [period, hasPremium]);
 
   useEffect(() => {
@@ -91,7 +100,7 @@ export default function Dashboard() {
   }, [load]);
 
   const summary = useMemo(() => summarize(rows ?? [], period), [rows, period]);
-  const { current, previous, chartData, latestActiveUsers, sources } = summary;
+  const { current, previous, chartData, latestActiveUsers, latestActiveUsersDay, sources } = summary;
   const manualEntries = useMemo(
     () => Object.fromEntries((rows ?? []).filter((r) => r.source === 'manual').map((r) => [r.day, r])),
     [rows],
@@ -118,6 +127,29 @@ export default function Dashboard() {
       setBusy('');
     }
   };
+
+  // Pulls fresh numbers from every connected source, then reloads everything on the page.
+  // Sources that push their own numbers (Custom API, manual entry) just get reloaded.
+  const refreshAll = () => run('refresh', async () => {
+    const outcomes = [];
+    if (stripe) {
+      const { data, status } = await callFunction('stripe-sync', { action: 'sync' });
+      outcomes.push(status === 200
+        ? { ok: true, text: `Stripe: ${formatCount(data.transactions)} transactions` }
+        : { ok: false, text: `Stripe: ${data?.error ?? 'sync failed'}` });
+    }
+    const loaded = await load();
+    if (!loaded) {
+      toast.show({ message: 'Could not reload your numbers. Check your connection and try again.', tone: 'error' });
+      return;
+    }
+    setRefreshedAt(new Date());
+    const failed = outcomes.some((o) => !o.ok);
+    toast.show({
+      message: outcomes.length ? `Refreshed. ${outcomes.map((o) => o.text).join(' · ')}` : 'Refreshed with your latest numbers.',
+      tone: failed ? 'error' : undefined,
+    });
+  });
 
   const syncStripe = () => run('sync', async () => {
     const { data, status } = await callFunction('stripe-sync', { action: 'sync' });
@@ -193,9 +225,9 @@ export default function Dashboard() {
   if (rows === null) {
     return (
       <>
-        <PageHeader title="Overview" description="Revenue, downloads and ad spend across every source." />
+        <PageHeader title="Your Empire HUD" description="Overview of your vibes across all platforms: revenue, downloads and ad spend from every source." />
         <div className="stat-grid" aria-busy="true" aria-label="Loading your numbers">
-          {[0, 1, 2, 3].map((i) => <div key={i} className="skeleton" style={{ height: 96 }} />)}
+          {[0, 1, 2, 3, 4].map((i) => <div key={i} className="skeleton" style={{ height: 96 }} />)}
         </div>
       </>
     );
@@ -203,7 +235,7 @@ export default function Dashboard() {
 
   return (
     <>
-      <PageHeader title="Overview" description="Revenue, downloads and ad spend across every source.">
+      <PageHeader title="Your Empire HUD" description="Overview of your vibes across all platforms: revenue, downloads and ad spend from every source.">
         {!firstUse && (
           <>
             <div className="segmented" role="group" aria-label="Period">
@@ -211,6 +243,10 @@ export default function Dashboard() {
                 <button key={p} type="button" aria-pressed={period === p} onClick={() => setPeriod(p)}>{p} days</button>
               ))}
             </div>
+            {refreshedAt && <span className="field-help" role="status">Updated {refreshedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>}
+            <button type="button" className="btn btn-secondary" onClick={refreshAll} disabled={Boolean(busy)} aria-busy={busy === 'refresh'}>
+              <RefreshCw aria-hidden="true" /> {busy === 'refresh' ? 'Refreshing…' : 'Refresh Data'}
+            </button>
             <button type="button" className="btn btn-secondary" onClick={exportCsv}><Download aria-hidden="true" /> Export CSV</button>
             <button type="button" className="btn btn-primary" onClick={() => openEntry()} disabled={Boolean(entry)}>
               <Plus aria-hidden="true" /> Add a day
@@ -317,61 +353,126 @@ export default function Dashboard() {
             )}
           </div>
 
-          <div className="stat-grid section">
-            <Stat label={`Revenue · last ${period} days`} value={formatMoney(current.revenue, currency)} delta={change(current.revenue, previous.revenue)} periodDays={period} />
-            <Stat label="Profit after fees and ads" value={formatMoney(profit, currency)} delta={previousProfit > 0 ? change(profit, previousProfit) : null} periodDays={period} />
-            <Stat label="Downloads" value={formatCount(current.downloads)} delta={change(current.downloads, previous.downloads)} periodDays={period} />
+          <div className="stat-grid stat-grid--five section">
+            <Stat label={`Total Revenue · last ${period} days`} icon={DollarSign} value={formatMoney(current.revenue, currency)} delta={change(current.revenue, previous.revenue)} periodDays={period} />
+            <Stat label="Profit after fees and ads" icon={PiggyBank} value={formatMoney(profit, currency)} delta={previousProfit > 0 ? change(profit, previousProfit) : null} periodDays={period} />
+            <Stat label="Downloads" icon={Download} value={formatCount(current.downloads)} delta={change(current.downloads, previous.downloads)} periodDays={period} />
             <Stat
-              label="Conversion"
+              label="Conversion Rate"
+              icon={TrendingUp}
               value={conversion === null ? '—' : formatPercent(conversion)}
               delta={conversion !== null && previousConversion !== null ? change(conversion, previousConversion) : null}
               periodDays={period}
               hint={conversion === null ? 'Add purchases to see purchases per download' : undefined}
             />
+            <Stat
+              label="Active Users · daily average"
+              icon={Users}
+              value={current.activeUsersAvg === null ? '—' : formatCount(Math.round(current.activeUsersAvg))}
+              delta={change(current.activeUsersAvg, previous.activeUsersAvg)}
+              periodDays={period}
+              hint={current.activeUsersAvg === null ? `No active users reported in the last ${period} days` : undefined}
+              note={latestActiveUsersDay ? `Latest: ${formatCount(latestActiveUsers)} on ${formatDay(latestActiveUsersDay)}` : undefined}
+            />
           </div>
 
           <section className="card section" aria-labelledby="chart-title">
             <div className="section-header">
-              <h2 id="chart-title">{chartMetric.label} per day</h2>
+              <h2 id="chart-title">{chartMetric.key === 'all' ? 'Comprehensive Growth & Profit Analysis' : `${chartMetric.label} per day`}</h2>
               <div className="segmented" role="group" aria-label="Chart metric">
                 {CHART_METRICS.map((m) => (
                   <button key={m.key} type="button" aria-pressed={metric === m.key} onClick={() => setMetric(m.key)}>{m.label}</button>
                 ))}
               </div>
             </div>
-            <div style={{ height: 260 }} role="img" aria-label={`${chartMetric.label} per day for the last ${period} days. Exact numbers are in the CSV export.`}>
-              <ResponsiveContainer width="100%" height="100%">
-                {chartMetric.key === 'downloads' ? (
-                  <BarChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                    <CartesianGrid vertical={false} stroke="#ECE7DE" />
-                    <XAxis dataKey="label" tick={{ fill: '#79746C', fontSize: 12 }} tickLine={false} axisLine={{ stroke: '#E2DCD0' }} minTickGap={18} />
-                    <YAxis tick={{ fill: '#79746C', fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={formatCompactCount} width={48} />
-                    <Tooltip cursor={{ fill: 'rgba(36,72,255,0.06)' }} formatter={(v, name) => [formatCount(v), name === 'paidDownloads' ? 'From ads' : 'Organic']} />
-                    <Bar dataKey="organicDownloads" stackId="d" fill="#2448FF" name="organicDownloads" />
-                    <Bar dataKey="paidDownloads" stackId="d" fill="#9DB0FF" radius={[3, 3, 0, 0]} name="paidDownloads" />
-                  </BarChart>
-                ) : (
-                  <AreaChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="chart-fill" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#2448FF" stopOpacity={0.18} />
-                        <stop offset="100%" stopColor="#2448FF" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid vertical={false} stroke="#ECE7DE" />
-                    <XAxis dataKey="label" tick={{ fill: '#79746C', fontSize: 12 }} tickLine={false} axisLine={{ stroke: '#E2DCD0' }} minTickGap={18} />
-                    <YAxis tick={{ fill: '#79746C', fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={(v) => formatCompactMoney(v, currency)} width={56} />
-                    <Tooltip formatter={(v) => [formatMoney(v, currency), chartMetric.label]} />
-                    <Area type="monotone" dataKey={chartMetric.key} stroke="#2448FF" strokeWidth={2} fill="url(#chart-fill)" />
-                  </AreaChart>
-                )}
-              </ResponsiveContainer>
-            </div>
+            {chartMetric.key === 'all' ? (
+              <div role="img" aria-label={`Revenue, profit, ad spend and downloads per day for the last ${period} days. Exact numbers are in the daily numbers table below.`}>
+                <GrowthChart data={chartData} currency={currency} />
+              </div>
+            ) : (
+              <div style={{ height: 260 }} role="img" aria-label={`${chartMetric.label} per day for the last ${period} days. Exact numbers are in the daily numbers table below.`}>
+                <ResponsiveContainer width="100%" height="100%">
+                  {chartMetric.key === 'downloads' ? (
+                    <BarChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                      <CartesianGrid vertical={false} stroke={CHART_CHROME.grid} />
+                      <XAxis dataKey="label" tick={{ fill: CHART_CHROME.axis, fontSize: 12 }} tickLine={false} axisLine={{ stroke: CHART_CHROME.baseline }} minTickGap={18} />
+                      <YAxis tick={{ fill: CHART_CHROME.axis, fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={formatCompactCount} width={48} allowDecimals={false} />
+                      <Tooltip
+                        cursor={{ fill: 'rgba(36,72,255,0.06)' }}
+                        isAnimationActive={false}
+                        content={<ChartReadout rows={[
+                          { key: 'organicDownloads', label: 'Organic installs', color: SERIES_COLORS.organicDownloads, format: formatCount },
+                          { key: 'paidDownloads', label: 'Paid acquisition', color: SERIES_COLORS.paidDownloads, format: formatCount },
+                        ]} />}
+                      />
+                      <Bar dataKey="organicDownloads" stackId="d" fill={SERIES_COLORS.organicDownloads} stroke={CHART_CHROME.surface} strokeWidth={1} maxBarSize={24} />
+                      <Bar dataKey="paidDownloads" stackId="d" fill={SERIES_COLORS.paidDownloads} stroke={CHART_CHROME.surface} strokeWidth={1} maxBarSize={24} radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  ) : (
+                    <AreaChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                      <CartesianGrid vertical={false} stroke={CHART_CHROME.grid} />
+                      <XAxis dataKey="label" tick={{ fill: CHART_CHROME.axis, fontSize: 12 }} tickLine={false} axisLine={{ stroke: CHART_CHROME.baseline }} minTickGap={18} />
+                      <YAxis tick={{ fill: CHART_CHROME.axis, fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={(v) => formatCompactMoney(v, currency)} width={56} />
+                      <Tooltip
+                        cursor={{ stroke: CHART_CHROME.axis, strokeWidth: 1 }}
+                        isAnimationActive={false}
+                        content={<ChartReadout rows={[{ key: chartMetric.key, label: chartMetric.label, color: SERIES_COLORS[chartMetric.key], format: (v) => formatMoney(v, currency) }]} />}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey={chartMetric.key}
+                        stroke={SERIES_COLORS[chartMetric.key]}
+                        strokeWidth={2}
+                        fill={SERIES_COLORS[chartMetric.key]}
+                        fillOpacity={0.1}
+                        activeDot={{ r: 4, fill: SERIES_COLORS[chartMetric.key], stroke: CHART_CHROME.surface, strokeWidth: 2 }}
+                      />
+                    </AreaChart>
+                  )}
+                </ResponsiveContainer>
+              </div>
+            )}
             <p className="field-help" style={{ marginTop: 8 }}>
               Sources: {sources.length ? sources.map((s) => SOURCE_LABELS[s]).join(', ') : 'none in this period'}.
-              {latestActiveUsers !== null && ` Latest active users: ${formatCount(latestActiveUsers)}.`}
               {' '}Profit is revenue minus payment fees and ad spend.
             </p>
+            <details className="chart-table">
+              <summary>Daily numbers</summary>
+              <div className="table-wrap">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Day</th>
+                      <th scope="col" className="num">Revenue</th>
+                      <th scope="col" className="num">Profit</th>
+                      <th scope="col" className="num">Ad spend</th>
+                      <th scope="col" className="num">Organic installs</th>
+                      <th scope="col" className="num">Paid acquisition</th>
+                      <th scope="col" className="num">Active users</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...chartData].reverse().map((d) => (
+                      <tr key={d.day}>
+                        <th scope="row">{formatDay(d.day)}</th>
+                        {d.hasData ? (
+                          <>
+                            <td className="num">{formatMoneyExact(d.revenue, currency)}</td>
+                            <td className="num">{formatMoneyExact(d.profit, currency)}</td>
+                            <td className="num">{formatMoneyExact(d.adSpend, currency)}</td>
+                            <td className="num">{formatCount(d.organicDownloads)}</td>
+                            <td className="num">{formatCount(d.paidDownloads)}</td>
+                            <td className="num">{d.activeUsers === null ? '—' : formatCount(d.activeUsers)}</td>
+                          </>
+                        ) : (
+                          <td colSpan={6} className="muted">No data</td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </details>
           </section>
 
           <section className="section" aria-labelledby="entries-title">

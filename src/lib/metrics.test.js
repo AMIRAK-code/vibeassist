@@ -35,9 +35,24 @@ describe('summarize', () => {
       row('2026-10-01', 'manual', { active_users: 420 }),
       row('2026-10-01', 'custom_api', { active_users: 30 }),
     ];
-    const { latestActiveUsers, sources } = summarize(rows, 30);
+    const { latestActiveUsers, latestActiveUsersDay, sources } = summarize(rows, 30);
     expect(latestActiveUsers).toBe(450);
+    expect(latestActiveUsersDay).toBe('2026-10-01');
     expect(sources.sort()).toEqual(['custom_api', 'manual']);
+  });
+
+  it('averages active users over the days that report them, per period', () => {
+    const rows = [
+      row('2026-10-02', 'manual', { active_users: 300 }),
+      row('2026-10-01', 'manual', { revenue: 5 }), // no active users: must not pull the average down
+      row('2026-09-30', 'manual', { active_users: 100 }),
+      row('2026-09-24', 'manual', { active_users: 50 }), // previous 7 days
+    ];
+    const { current, previous } = summarize(rows, 7);
+    expect(current.activeUsersAvg).toBe(200);
+    expect(previous.activeUsersAvg).toBe(50);
+    expect(summarize([row('2026-10-02', 'manual', { revenue: 1 })], 7).current.activeUsersAvg).toBeNull();
+    expect(summarize([], 7).latestActiveUsersDay).toBeNull();
   });
 });
 
