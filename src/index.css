@@ -484,6 +484,17 @@ a.start-option:hover { border-color: var(--ci-cobalt); }
   .legal-docs { grid-template-columns: 1fr; }
 }
 
+/* News & Newsletter ----------------------------------------------------------------------------- */
+.newsletter-layout { align-items: start; }
+.newsletter-side > .section:first-child { margin-top: 0; }
+.segmented--wrap { flex-wrap: wrap; height: auto; }
+.subscribe-card { border-color: var(--ci-cobalt-light); }
+.subscribe-card .check-row { margin-top: 10px; }
+.subscribe-state { display: flex; align-items: center; gap: 8px; margin: 12px 0 4px; font-weight: 600; }
+.subscribe-state svg { width: 18px; height: 18px; color: var(--app-success); flex: none; }
+.email-preview { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.email-preview iframe { width: 100%; height: 520px; border: 1px solid var(--app-border); border-radius: var(--app-radius-sm); background: #F5F1E8; }
+
 /* AI Business Analyzer ---------------------------------------------------------------------- */
 .analyzer-cards > .card { display: flex; flex-direction: column; }
 .analyzer-cards .analyzer-ask { margin-top: auto; align-self: flex-start; }

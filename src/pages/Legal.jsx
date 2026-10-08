@@ -91,6 +91,7 @@ export function Privacy() {
         <li><strong>Your profile:</strong> experience, profit target, goals, currency and launch checklist ticks. Used to tailor plans and remember your progress.</li>
         <li><strong>Your numbers:</strong> the daily figures and ad campaigns you enter, send through the Custom API, import as a CSV report, or import from Stripe, the App Store or Google Play. If you connect one of these, we keep your read-only key encrypted and import daily totals, not your customers' details.</li>
         <li><strong>Plans and questions:</strong> the plans you ask for and the questions you ask, plus a daily count of requests to enforce the limit.</li>
+        <li><strong>The Weekly Vibe email</strong> (only if you subscribe): your subscription status, when and with which words you agreed, and whether to include your numbers. We send it on the basis of your consent, which you can withdraw at any time from any email or from Settings.</li>
         <li><strong>Billing:</strong> your plan, its status and renewal date, and the Stripe customer reference. Stripe holds your card and invoice details.</li>
       </ul>
       <p>We use this to provide the service you signed up for (contract), to keep it secure and prevent abuse (legitimate interest), and to keep accounting records (legal obligation). We don't sell your data, and there is no advertising or tracking.</p>
@@ -102,8 +103,8 @@ export function Privacy() {
         <li><strong>Anthropic</strong> writes plans and answers. Only when you ask for one, it receives a summary of your numbers, your campaigns and your profile answers; never your email address or keys. It doesn't use this to train its models.</li>
         <li><strong>Apple</strong> and <strong>Google</strong>, only if you connect App Store Connect or Google Play: we read your sales and install reports from them with the key you gave us.</li>
         <li><strong>Cloudflare</strong> serves this website.</li>
-        <li>Our <strong>email provider</strong> sends sign-up and password emails.</li>
-        <li>The News page loads stories straight from <strong>Hacker News (Algolia)</strong>, which sees your browser's IP address when you open it.</li>
+        <li>Our <strong>email provider</strong> (Resend, EU region) sends sign-up and password emails and, if you subscribe, the Weekly Vibe. It doesn't track opens or clicks.</li>
+        <li>The News & Newsletter page's topic tabs load stories straight from <strong>Hacker News (Algolia)</strong>, which sees your browser's IP address when you open them. The AI news and community threads are fetched by our server from Hacker News and Reddit, which learn nothing about you.</li>
       </ul>
       <p>Some of these companies may process data outside the EU. Where they do, they're bound by the EU's Standard Contractual Clauses.</p>
 

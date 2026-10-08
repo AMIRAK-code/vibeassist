@@ -23,7 +23,9 @@ const Plan = lazy(() => import('./pages/Plan'));
 const AIAnalyzer = lazy(() => import('./pages/AIAnalyzer'));
 const Publishing = lazy(() => import('./pages/Publishing'));
 const CampaignOverview = lazy(() => import('./pages/CampaignOverview'));
-const News = lazy(() => import('./pages/News'));
+const Newsletter = lazy(() => import('./pages/Newsletter'));
+const NewsletterConfirm = lazy(() => import('./pages/NewsletterLinks').then((m) => ({ default: m.NewsletterConfirm })));
+const NewsletterUnsubscribe = lazy(() => import('./pages/NewsletterLinks').then((m) => ({ default: m.NewsletterUnsubscribe })));
 const Settings = lazy(() => import('./pages/Settings'));
 const CheckoutReturn = lazy(() => import('./pages/CheckoutReturn'));
 const Terms = lazy(() => import('./pages/Legal').then((m) => ({ default: m.Terms })));
@@ -262,11 +264,13 @@ function App() {
             <Route path="/terms" element={<Suspense fallback={<FullPageSpinner />}><Terms /></Suspense>} />
             <Route path="/privacy" element={<Suspense fallback={<FullPageSpinner />}><Privacy /></Suspense>} />
             <Route path="/refunds" element={<Suspense fallback={<FullPageSpinner />}><Refunds /></Suspense>} />
+            <Route path="/newsletter/confirm" element={<Suspense fallback={<FullPageSpinner />}><NewsletterConfirm /></Suspense>} />
+            <Route path="/newsletter/unsubscribe" element={<Suspense fallback={<FullPageSpinner />}><NewsletterUnsubscribe /></Suspense>} />
 
             <Route element={<AuthRoute />}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/publishing" element={<Publishing />} />
-              <Route path="/newsletter" element={<News />} />
+              <Route path="/newsletter" element={<Newsletter />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/premium/welcome" element={<CheckoutReturn />} />
               <Route element={<PremiumRoute feature="ai-analyzer" />}>
