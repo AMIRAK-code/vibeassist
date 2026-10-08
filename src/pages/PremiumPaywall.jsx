@@ -10,7 +10,7 @@ import Notice from '../components/ui/Notice';
 import LegalLinks from '../components/LegalLinks';
 
 const FREE = [
-  'Overview of revenue, profit, downloads and conversion',
+  'Overall Income: revenue, profit, downloads and conversion',
   'Add days by hand and export everything as CSV',
   'Launch checklists for iOS, Android, web and Windows',
   'Hacker News feed for app makers',

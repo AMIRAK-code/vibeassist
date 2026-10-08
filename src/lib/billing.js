@@ -10,7 +10,7 @@ const formatDate = (iso) => new Date(iso).toLocaleDateString('en-US', { month: '
 // One line about the plan for Settings: what it is, and what happens next
 export function planSummary(subscription, now = new Date()) {
   if (!isActivePremium(subscription, now)) {
-    return { label: 'Free', detail: 'Overview, manual entry, launch guides and news.' };
+    return { label: 'Free', detail: 'Overall Income, manual entry, Legal & Publishing guides and News & Newsletter.' };
   }
   if (subscription.source === 'admin') {
     return { label: 'Premium (admin)', detail: 'Given to this account by an admin. Nothing is billed and it doesn’t expire.' };

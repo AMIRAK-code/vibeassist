@@ -1,6 +1,6 @@
 import React, { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, ListChecks, Megaphone, Plug, Rocket, Newspaper, Settings as SettingsIcon, LogOut, Menu, X } from 'lucide-react';
+import { BadgeCheck, LayoutDashboard, ListChecks, Lock, Megaphone, Newspaper, Settings as SettingsIcon, ShieldAlert, TrendingUp, LogOut, Menu, X } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { AuthProvider } from './context/AuthContext';
 import { useAuth } from './context/auth';
@@ -29,25 +29,41 @@ const Terms = lazy(() => import('./pages/Legal').then((m) => ({ default: m.Terms
 const Privacy = lazy(() => import('./pages/Legal').then((m) => ({ default: m.Privacy })));
 const Refunds = lazy(() => import('./pages/Legal').then((m) => ({ default: m.Refunds })));
 
-const WORK = [
-  { to: '/dashboard', label: 'Overview', icon: LayoutDashboard },
-  { to: '/plan', label: 'Plan', icon: ListChecks, premium: true },
-  { to: '/campaigns', label: 'Campaigns', icon: Megaphone, premium: true },
-  { to: '/data-sources', label: 'Data sources', icon: Plug, premium: true },
+const FREE_PAGES = [
+  { to: '/dashboard', label: 'Overall Income', icon: LayoutDashboard },
+  { to: '/publishing', label: 'Legal & Publishing', icon: ShieldAlert },
+  { to: '/newsletter', label: 'News & Newsletter', icon: Newspaper },
 ];
-const REFERENCE = [
-  { to: '/launch', label: 'Launch guides', icon: Rocket },
-  { to: '/news', label: 'News', icon: Newspaper },
+const PREMIUM_PAGES = [
+  { to: '/integrations', label: 'Integrations', icon: TrendingUp, premium: true },
+  { to: '/plan', label: 'Weekly Plan', icon: ListChecks, premium: true },
+  { to: '/ads', label: 'Ad Manager', icon: Megaphone, premium: true },
 ];
-const ALL_PAGES = [...WORK, ...REFERENCE, { to: '/settings', label: 'Settings' }];
+const ALL_PAGES = [...FREE_PAGES, ...PREMIUM_PAGES, { to: '/settings', label: 'Settings' }];
 
 function NavItem({ item, hasPremium, onNavigate }) {
   const Icon = item.icon;
   return (
     <NavLink to={item.to} onClick={onNavigate}>
       <Icon aria-hidden="true" /> {item.label}
-      {item.premium && !hasPremium && <span className="nav-tag">Premium</span>}
+      {item.premium && !hasPremium && (
+        <>
+          <Lock className="nav-lock" aria-hidden="true" />
+          <span className="visually-hidden"> (Premium)</span>
+        </>
+      )}
     </NavLink>
+  );
+}
+
+// Paying (or admin) members see what they have instead of an upgrade pitch
+function PremiumActiveCard({ onNavigate }) {
+  return (
+    <div className="upgrade-card upgrade-card--active">
+      <p className="upgrade-card-title"><BadgeCheck aria-hidden="true" /> Premium Active</p>
+      <p>All pro features unlocked.</p>
+      <Link to="/settings#plan" className="btn btn-secondary btn-sm w-full" onClick={onNavigate}>Plan & billing</Link>
+    </div>
   );
 }
 
@@ -60,7 +76,7 @@ function UpgradeCard({ subscription, onNavigate }) {
   return (
     <div className="upgrade-card">
       <p className="upgrade-card-title">{demoEnds ? `Your demo Premium ends ${demoEnds}` : "You're on the Free plan"}</p>
-      <p>Weekly plans from your numbers, Stripe imports and campaign tracking.</p>
+      <p>Unlock the AI tools, integrations and the Ad Manager.</p>
       <Link to={`/premium?from=${encodeURIComponent(location.pathname)}`} className="btn btn-primary btn-sm w-full" onClick={onNavigate}>
         {demoEnds ? 'Subscribe' : 'Upgrade to Premium'}
       </Link>
@@ -96,11 +112,13 @@ function Sidebar({ open, onClose }) {
         {/* The logo leads back to the homepage, as it always has */}
         <Link to="/" className="app-brand" aria-label="VibeAssist home" onClick={onClose}><BrandMark /> VibeAssist</Link>
         <nav className="app-nav" ref={firstLink}>
-          {WORK.map((item) => <NavItem key={item.to} item={item} hasPremium={hasPremium} onNavigate={onClose} />)}
-          <p className="app-nav-label">Reference</p>
-          {REFERENCE.map((item) => <NavItem key={item.to} item={item} hasPremium={hasPremium} onNavigate={onClose} />)}
+          {FREE_PAGES.map((item) => <NavItem key={item.to} item={item} hasPremium={hasPremium} onNavigate={onClose} />)}
+          <div className="app-nav-divider" role="separator" />
+          {PREMIUM_PAGES.map((item) => <NavItem key={item.to} item={item} hasPremium={hasPremium} onNavigate={onClose} />)}
         </nav>
-        {(!hasPremium || demo) && <UpgradeCard subscription={demo ? subscription : null} onNavigate={onClose} />}
+        {(!hasPremium || demo)
+          ? <UpgradeCard subscription={demo ? subscription : null} onNavigate={onClose} />
+          : <PremiumActiveCard onNavigate={onClose} />}
         <div className="app-sidebar-footer app-nav">
           <NavLink to="/settings" onClick={onClose}><SettingsIcon aria-hidden="true" /> Settings</NavLink>
           <button type="button" className="btn btn-ghost" style={{ justifyContent: 'flex-start', minHeight: 38, fontWeight: 500 }} onClick={handleSignOut}>
@@ -245,27 +263,27 @@ function App() {
 
             <Route element={<AuthRoute />}>
               <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/launch" element={<LaunchGuides />} />
-              <Route path="/news" element={<News />} />
+              <Route path="/publishing" element={<LaunchGuides />} />
+              <Route path="/newsletter" element={<News />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/premium/welcome" element={<CheckoutReturn />} />
               <Route element={<PremiumRoute feature="plan" />}>
                 <Route path="/plan" element={<Plan />} />
               </Route>
-              <Route element={<PremiumRoute feature="campaigns" />}>
-                <Route path="/campaigns" element={<CampaignOverview />} />
+              <Route element={<PremiumRoute feature="ads" />}>
+                <Route path="/ads" element={<CampaignOverview />} />
               </Route>
-              <Route element={<PremiumRoute feature="data-sources" />}>
-                <Route path="/data-sources" element={<Integrations />} />
+              <Route element={<PremiumRoute feature="integrations" />}>
+                <Route path="/integrations" element={<Integrations />} />
               </Route>
             </Route>
 
-            {/* Earlier addresses keep working */}
+            {/* Addresses from the Oct 1 layout keep working */}
+            <Route path="/campaigns" element={<Navigate to="/ads" replace />} />
+            <Route path="/data-sources" element={<Navigate to="/integrations" replace />} />
+            <Route path="/launch" element={<Navigate to="/publishing" replace />} />
+            <Route path="/news" element={<Navigate to="/newsletter" replace />} />
             <Route path="/ai-analyzer" element={<Navigate to="/plan" replace />} />
-            <Route path="/ads" element={<Navigate to="/campaigns" replace />} />
-            <Route path="/integrations" element={<Navigate to="/data-sources" replace />} />
-            <Route path="/publishing" element={<Navigate to="/launch" replace />} />
-            <Route path="/newsletter" element={<Navigate to="/news" replace />} />
             <Route path="/orchestrator" element={<Navigate to="/dashboard" replace />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

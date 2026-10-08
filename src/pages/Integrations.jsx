@@ -66,7 +66,7 @@ export default function Integrations() {
     if (status !== 200) {
       setStripeError(data?.error ?? 'Stripe request failed. Try again.');
     } else if (action === 'disconnect') {
-      toast.show({ message: 'Stripe disconnected. Revenue already imported stays on your Overview.' });
+      toast.show({ message: 'Stripe disconnected. Revenue already imported stays on Overall Income.' });
     } else {
       setStripeKey('');
       const skipped = data.otherCurrency ? ` ${data.otherCurrency} in other currencies were skipped.` : '';
@@ -107,7 +107,7 @@ export default function Integrations() {
 
   return (
     <>
-      <PageHeader title="Data sources" description="Bring numbers in automatically instead of typing them. Everything lands on your Overview." />
+      <PageHeader title="Integrations & Data Sources" description="Bring numbers in automatically instead of typing them. Everything lands on Overall Income." />
 
       {loadError && <div className="section"><Notice tone="error" actions={<button type="button" className="btn btn-secondary btn-sm" onClick={load}>Try again</button>}>{loadError}</Notice></div>}
 
@@ -219,7 +219,7 @@ export default function Integrations() {
         </section>
 
         <p className="field-help">
-          Google Play Console and App Store Connect can't be connected yet. Until they can, send those numbers through the Custom API or add them by hand on the Overview.
+          Google Play Console and App Store Connect can't be connected yet. Until they can, send those numbers through the Custom API or add them by hand on Overall Income.
         </p>
       </div>
     </>

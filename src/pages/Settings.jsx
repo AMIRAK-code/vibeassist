@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Download } from 'lucide-react';
 import { useAuth } from '../context/auth';
 import { useToast } from '../components/ui/toast-context';
@@ -118,6 +118,12 @@ export default function Settings() {
 
   const toggleGoal = (goal) =>
     update({ goals: form.goals.includes(goal) ? form.goals.filter((g) => g !== goal) : [...form.goals, goal] });
+
+  // The sidebar's Plan & billing link lands on the plan section
+  const { hash } = useLocation();
+  useEffect(() => {
+    if (hash === '#plan') document.getElementById('plan')?.scrollIntoView({ block: 'start' });
+  }, [hash]);
 
   // Coming back from Stripe's billing page with the Back button restores this page as it was
   useEffect(() => {
@@ -259,7 +265,7 @@ export default function Settings() {
         </fieldset>
       </section>
 
-      <section className="card section" aria-labelledby="plan-title">
+      <section className="card section" id="plan" aria-labelledby="plan-title">
         <h2 id="plan-title" className="card-title">Plan</h2>
         <p style={{ marginTop: 6 }}><strong>{plan.label}</strong></p>
         {plan.warning
