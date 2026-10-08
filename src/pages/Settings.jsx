@@ -11,6 +11,7 @@ import { openBillingPortal, planSummary } from '../lib/billing';
 import { authMessage } from '../lib/authErrors';
 import PageHeader from '../components/ui/PageHeader';
 import Notice from '../components/ui/Notice';
+import NewsletterSettings from '../components/NewsletterSettings';
 
 const FIELDS = ['name', 'experience', 'profit_expectancy', 'goals', 'currency'];
 const FIELD_NAMES = { name: 'name', experience: 'experience', profit_expectancy: 'monthly profit target', goals: 'goals', currency: 'currency' };
@@ -119,10 +120,10 @@ export default function Settings() {
   const toggleGoal = (goal) =>
     update({ goals: form.goals.includes(goal) ? form.goals.filter((g) => g !== goal) : [...form.goals, goal] });
 
-  // The sidebar's Plan & billing link lands on the plan section
+  // Links to #plan (sidebar) and #newsletter (emails) land on their section
   const { hash } = useLocation();
   useEffect(() => {
-    if (hash === '#plan') document.getElementById('plan')?.scrollIntoView({ block: 'start' });
+    if (hash === '#plan' || hash === '#newsletter') document.getElementById(hash.slice(1))?.scrollIntoView({ block: 'start' });
   }, [hash]);
 
   // Coming back from Stripe's billing page with the Back button restores this page as it was
@@ -295,6 +296,8 @@ export default function Settings() {
           <p className="field-help" style={{ marginTop: 10 }}>Change plan, update your card, download invoices or cancel on Stripe's billing page.</p>
         )}
       </section>
+
+      <NewsletterSettings />
 
       <section className="card section" aria-labelledby="account-title">
         <h2 id="account-title" className="card-title">Account</h2>
