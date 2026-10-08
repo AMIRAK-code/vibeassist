@@ -3,6 +3,11 @@ import { Link } from 'react-router-dom';
 import PageHeader from './ui/PageHeader';
 
 const FEATURES = {
+  'ai-analyzer': {
+    title: 'AI Business Analyzer',
+    what: 'See cost per install, revenue per user, payback and lifetime value worked out from your numbers, check how buyers reacted to price changes, and chat with Claude about your last 90 days.',
+    path: '/ai-analyzer',
+  },
   plan: {
     title: 'Weekly Plan',
     what: 'Get a short weekly plan from your own numbers: three to five concrete steps, each showing the figures it is based on. Keep the steps you want and tick them off during the week.',
