@@ -37,6 +37,10 @@ export const LIMITS = {
   budgetChars: 120_000,
   toolChars: 600,
   freeHandoffs: 3,
+  premiumHandoffs: 500,
+  // Chats condensed a day: on VibeAssist's AI, and on the user's own key
+  sharedPerDay: 5,
+  ownPerDay: 50,
 };
 
 // For the "ask your AI to write it" path: pasted into the AI the user is leaving

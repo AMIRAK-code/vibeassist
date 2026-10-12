@@ -484,6 +484,30 @@ a.start-option:hover { border-color: var(--ci-cobalt); }
   .legal-docs { grid-template-columns: 1fr; }
 }
 
+/* Context Handoffs (list and view reuse the legal document styles above) ------------------------ */
+.handoff-create > .notice { margin-top: 14px; }
+.handoff-steps { margin: 16px 0 0; padding-left: 22px; display: grid; gap: 18px; }
+.handoff-steps > li::marker { font-weight: 700; color: var(--ci-cobalt); }
+.handoff-steps p { margin: 0 0 8px; }
+.handoff-steps textarea, .handoff-chat textarea { font-family: var(--ci-font-mono); font-size: 13px; }
+.handoff-chat { margin-top: 16px; display: grid; gap: 12px; }
+.handoff-chosen { display: grid; gap: 12px; padding-top: 12px; border-top: 1px solid var(--ci-hairline); }
+.handoff-picker { list-style: none; margin: 8px 0 0; padding: 0; max-height: 260px; overflow: auto; border: 1px solid var(--ci-hairline); border-radius: 10px; }
+.handoff-picker label { display: flex; align-items: flex-start; gap: 10px; padding: 8px 12px; border-top: 1px solid var(--ci-hairline); cursor: pointer; }
+.handoff-picker li:first-child label { border-top: 0; }
+.handoff-picker input { margin-top: 4px; }
+.handoff-body .code-block { margin: 8px 0; }
+.handoff-share { margin-top: 22px; padding-top: 14px; border-top: 1px solid var(--ci-hairline); }
+.handoff-share h4 { display: flex; align-items: center; gap: 6px; font-size: 15px; margin-bottom: 4px; }
+.handoff-share h4 svg { width: 16px; height: 16px; }
+.handoff-days { width: auto; min-height: 34px; padding-top: 4px; padding-bottom: 4px; }
+.handoff-link { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
+.handoff-link input { flex: 1 1 280px; font-family: var(--ci-font-mono); font-size: 12.5px; }
+.handoff-link .field-help { flex-basis: 100%; margin: 0; }
+.handoff-links { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 6px; }
+.handoff-links li { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.shared-handoff .legal-body h2 { font-size: 18px; margin: 26px 0 8px; }
+
 /* News & Newsletter ----------------------------------------------------------------------------- */
 .newsletter-layout { align-items: start; }
 .newsletter-side > .section:first-child { margin-top: 0; }

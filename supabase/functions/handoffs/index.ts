@@ -18,9 +18,7 @@ import {
   budgetMessages, cleanMessages, cleanTitle, CONDENSE_INSTRUCTIONS, CONDENSE_SCHEMA, fromAnswer, LIMITS, renderTranscript, sourceLabel, SOURCES,
 } from '../_shared/handoff/format.js';
 
-const SHARED_KEY_PER_DAY = 5; // condensed with VibeAssist's key
-const OWN_KEY_PER_DAY = 50; // condensed with the user's own key
-const PREMIUM_HANDOFFS = 500;
+const { sharedPerDay: SHARED_KEY_PER_DAY, ownPerDay: OWN_KEY_PER_DAY, premiumHandoffs: PREMIUM_HANDOFFS } = LIMITS;
 
 const toIso = (value: unknown) => {
   const date = typeof value === 'string' || typeof value === 'number' ? new Date(value) : null;
