@@ -1,0 +1,39 @@
+# Copy to .github/workflows/vibeassist.yml in your repository, then add the engine key from the
+# Anti-Fragile Engine page as a repository secret called VIBEASSIST_KEY.
+name: VibeAssist Engine
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Commit or tag to check (for the Backtest Simulator)
+        required: false
+
+permissions:
+  contents: write # only the Snapshot Engine pushes, and only tags
+
+jobs:
+  engine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # mutation testing compares with the base commit; snapshots prune old tags
+          ref: ${{ inputs.ref || '' }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      # - run: pip install -r requirements.txt   # Python projects
+      - run: npm test
+      - uses: OWNER/vibeassist-engine@v1 # replace OWNER with the GitHub account you published the action under
+        with:
+          vibeassist-key: ${{ secrets.VIBEASSIST_KEY }}
+          modules: mutation,vision,snapshot
+          start-command: npm run build && npx vite preview --port 3000
+          base-url: http://localhost:3000
+          urls: /,/pricing

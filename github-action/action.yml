@@ -1,0 +1,74 @@
+name: VibeAssist Anti-Fragile Engine
+description: Mutation testing, screenshot checks and snapshot tags that report to your VibeAssist Anti-Fragile Engine.
+author: VibeAssist
+branding:
+  icon: shield
+  color: blue
+
+inputs:
+  vibeassist-key:
+    description: Engine key from the Anti-Fragile Engine page (save it as the VIBEASSIST_KEY repository secret).
+    required: true
+  modules:
+    description: Which checks to run, comma separated - mutation, vision, snapshot.
+    default: snapshot
+  mutate-timeout-minutes:
+    description: Stop mutation testing after this many minutes.
+    default: '15'
+  start-command:
+    description: Command that starts your app for screenshots, for example "npm run preview -- --port 3000".
+    default: ''
+  base-url:
+    description: Where the started app answers.
+    default: http://localhost:3000
+  wait-on:
+    description: URL to wait for before taking screenshots (defaults to base-url).
+    default: ''
+  urls:
+    description: Paths to screenshot, comma separated (at most 6 screenshots in total).
+    default: /
+  api-url:
+    description: VibeAssist functions URL. Leave as it is.
+    default: https://thwxxgibcbxkfodzoedb.supabase.co/functions/v1
+
+runs:
+  using: composite
+  steps:
+    - name: Mutation Validator
+      if: contains(inputs.modules, 'mutation')
+      shell: bash
+      env:
+        VIBEASSIST_KEY: ${{ inputs.vibeassist-key }}
+        VIBEASSIST_API: ${{ inputs.api-url }}
+        MUTATE_TIMEOUT_MINUTES: ${{ inputs.mutate-timeout-minutes }}
+        GITHUB_HEAD_REPO_FORK: ${{ github.event.pull_request.head.repo.fork }}
+      run: node "${{ github.action_path }}/scripts/mutation.mjs"
+
+    - name: Install Playwright for Vision Grounding
+      if: contains(inputs.modules, 'vision')
+      shell: bash
+      run: |
+        npm install --no-save --no-audit --no-fund --prefix "$RUNNER_TEMP/vibeassist-playwright" playwright@1
+        "$RUNNER_TEMP/vibeassist-playwright/node_modules/.bin/playwright" install --with-deps chromium
+
+    - name: Vision Grounding
+      if: contains(inputs.modules, 'vision')
+      shell: bash
+      env:
+        VIBEASSIST_KEY: ${{ inputs.vibeassist-key }}
+        VIBEASSIST_API: ${{ inputs.api-url }}
+        PLAYWRIGHT_MODULE: ${{ runner.temp }}/vibeassist-playwright/node_modules/playwright/index.mjs
+        START_COMMAND: ${{ inputs.start-command }}
+        VISION_BASE_URL: ${{ inputs.base-url }}
+        WAIT_ON: ${{ inputs.wait-on || inputs.base-url }}
+        VISION_URLS: ${{ inputs.urls }}
+        GITHUB_HEAD_REPO_FORK: ${{ github.event.pull_request.head.repo.fork }}
+      run: node "${{ github.action_path }}/scripts/vision.mjs"
+
+    - name: Snapshot Engine
+      if: contains(inputs.modules, 'snapshot') && success()
+      shell: bash
+      env:
+        VIBEASSIST_KEY: ${{ inputs.vibeassist-key }}
+        VIBEASSIST_API: ${{ inputs.api-url }}
+      run: node "${{ github.action_path }}/scripts/snapshot.mjs"

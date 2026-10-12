@@ -27,7 +27,7 @@ export default function Integrations() {
     const [connections, keys] = await Promise.all([
       supabase.from('integrations').select('provider, status, account_label, last_error, last_synced_at, settings'),
       // The key hash is not readable, so name the columns instead of select('*')
-      supabase.from('api_keys').select('key_prefix, created_at, last_used_at').is('revoked_at', null).maybeSingle(),
+      supabase.from('api_keys').select('key_prefix, created_at, last_used_at').eq('scope', 'metrics').is('revoked_at', null).maybeSingle(),
     ]);
     if (connections.error) setLoadError(friendlyError(connections.error, 'Could not load your connections.'));
     else setLoadError('');
