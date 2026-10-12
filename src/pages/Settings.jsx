@@ -273,13 +273,13 @@ export default function Settings() {
           ? <div style={{ marginTop: 8 }}><Notice tone="warning">{plan.detail}</Notice></div>
           : <p className="field-help">{plan.detail}</p>}
         <div className="page-actions" style={{ marginTop: 12 }}>
-          {subscription?.source === 'stripe' && (
+          {(subscription?.source === 'stripe' || subscription?.source === 'pass') && (
             <button type="button" className="btn btn-secondary" onClick={manageBilling} disabled={Boolean(busy)} aria-busy={busy === 'portal'}>
               {busy === 'portal' ? 'Opening billing…' : hasPremium ? 'Manage billing' : 'Billing history'}
             </button>
           )}
-          {(!hasPremium || demoPlan) && (
-            <Link to="/premium?from=/settings" className={`btn ${hasPremium ? 'btn-ghost' : 'btn-secondary'}`}>{demoPlan ? 'Subscribe' : 'See Premium plans'}</Link>
+          {(!hasPremium || demoPlan || subscription?.source === 'pass') && (
+            <Link to="/premium?from=/settings" className={`btn ${hasPremium ? 'btn-ghost' : 'btn-secondary'}`}>{demoPlan || subscription?.source === 'pass' ? 'Subscribe' : 'See Premium plans'}</Link>
           )}
           {demoPlan && !confirmingFree && (
             <button type="button" className="btn btn-ghost" onClick={() => setConfirmingFree(true)}>Switch to Free</button>

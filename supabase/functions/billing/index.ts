@@ -1,14 +1,16 @@
 // Premium billing through Stripe, for the signed-in user.
 //
-// POST { action: 'config' }                     -> { configured, livemode }
+// POST { action: 'config' }                     -> { configured, livemode, pass: { open, eligible, ends_at, amount, days } }
 // POST { action: 'checkout', cycle, from? }     -> { url } of a Stripe Checkout page
+// POST { action: 'pass_checkout', from? }       -> { url } for the one-time 60-day pass (once per account)
 // POST { action: 'portal' }                     -> { url } of the Stripe billing portal
 // POST { action: 'sync', session_id? }          -> { subscription, checkout? } pulled fresh from Stripe
 //
-// Secrets: STRIPE_SECRET_KEY (required), SITE_URL (the deployed app's address).
+// Secrets: STRIPE_SECRET_KEY (required), SITE_URL (the deployed app's address),
+// PASS_OFFER_ENDS_AT (optional ISO date after which the pass is no longer offered).
 // The stripe-webhook function keeps plans in step with renewals and cancellations.
 import { createClient } from 'npm:@supabase/supabase-js@2.117.2';
-import { premiumPrice, StripeError, stripeRequest, syncCustomer } from '../_shared/stripe.ts';
+import { grantPassFromSession, PREMIUM_PASS, passOfferOpen, passPrice, premiumPrice, StripeError, stripeRequest, syncCustomer } from '../_shared/stripe.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -78,10 +80,9 @@ Deno.serve(async (req) => {
   }
 
   const key = Deno.env.get('STRIPE_SECRET_KEY') ?? '';
-  if (body.action === 'config') {
-    return json({ configured: Boolean(key), livemode: /^(sk|rk)_live_/.test(key) });
+  if (!key) {
+    return body.action === 'config' ? json({ configured: false, livemode: false, pass: null }) : json({ error: 'not_configured' }, 503);
   }
-  if (!key) return json({ error: 'not_configured' }, 503);
 
   // Bypasses RLS: only touches this user's own subscription row
   const admin = createClient(url, projectKey('SUPABASE_SECRET_KEYS', 'SUPABASE_SERVICE_ROLE_KEY'), {
@@ -110,7 +111,61 @@ Deno.serve(async (req) => {
     return customer.id;
   };
 
+  // Whether this account can buy the one-time pass: the offer is open, it has never had one,
+  // and it isn't already on a paid, admin or pass Premium
+  const passInfo = async () => {
+    const endsAt = Deno.env.get('PASS_OFFER_ENDS_AT') || null;
+    const open = passOfferOpen(endsAt);
+    const { data: used } = await admin.from('premium_passes').select('status').eq('user_id', user.id).in('status', ['paid', 'refunded']).limit(1);
+    const active = current.plan === 'premium' && (!current.current_period_end || new Date(current.current_period_end) > new Date());
+    const blocked = active && ['stripe', 'admin', 'pass'].includes(current.source);
+    const alreadyUsed = Boolean(used?.length);
+    return { open, eligible: open && !alreadyUsed && !blocked, used: alreadyUsed, ends_at: endsAt, amount: PREMIUM_PASS.unit_amount, days: PREMIUM_PASS.days };
+  };
+
   try {
+    if (body.action === 'config') {
+      return json({ configured: true, livemode: /^(sk|rk)_live_/.test(key), pass: await passInfo() });
+    }
+
+    if (body.action === 'pass_checkout') {
+      const pass = await passInfo();
+      if (!pass.open) return json({ error: 'pass_unavailable' }, 410);
+      if (!pass.eligible) return json({ error: pass.used ? 'pass_used' : 'already_subscribed' }, 409);
+      // A pass checkout left open in another tab is closed first, so only one can be paid
+      const { data: openPasses } = await admin.from('premium_passes').select('checkout_session_id').eq('user_id', user.id).eq('status', 'open');
+      for (const open of openPasses ?? []) {
+        try {
+          await stripeRequest(key, 'POST', `checkout/sessions/${open.checkout_session_id}/expire`);
+        } catch {
+          // already completed or expired on Stripe's side
+        }
+        await admin.from('premium_passes').update({ status: 'expired' }).eq('checkout_session_id', open.checkout_session_id).eq('status', 'open');
+      }
+      const origin = appOrigin(req);
+      const [customer, price] = await Promise.all([ensureCustomer(), passPrice(key)]);
+      const session = await stripeRequest(key, 'POST', 'checkout/sessions', {
+        mode: 'payment',
+        customer,
+        client_reference_id: user.id,
+        line_items: [{ price, quantity: 1 }],
+        automatic_tax: { enabled: true },
+        billing_address_collection: 'required',
+        tax_id_collection: { enabled: true },
+        customer_update: { address: 'auto', name: 'auto' },
+        invoice_creation: { enabled: true },
+        metadata: { user_id: user.id, kind: 'premium_pass' },
+        payment_intent_data: { metadata: { user_id: user.id, kind: 'premium_pass' } },
+        expires_at: Math.floor(Date.now() / 1000) + 31 * 60,
+        custom_text: { submit: { message: `Premium starts as soon as you pay and lasts ${PREMIUM_PASS.days} days. It doesn't renew. Ask within 14 days for a full refund.` } },
+        success_url: `${origin}/premium/welcome?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${origin}/premium?checkout=cancelled&from=${encodeURIComponent(safePath(body.from))}`,
+      });
+      const { error: passError } = await admin.from('premium_passes').insert({ user_id: user.id, checkout_session_id: session.id, status: 'open' });
+      if (passError) throw passError;
+      return json({ url: session.url });
+    }
+
     if (body.action === 'checkout') {
       if (current.plan === 'premium' && (current.source === 'stripe' || current.source === 'admin')) {
         return json({ error: 'already_subscribed' }, 409);
@@ -118,6 +173,10 @@ Deno.serve(async (req) => {
       const cycle = body.cycle === 'yearly' ? 'yearly' : 'monthly';
       const origin = appOrigin(req);
       const [customer, price] = await Promise.all([ensureCustomer(), premiumPrice(key, cycle)]);
+      // Someone on the pass starts the subscription now but pays when the pass runs out
+      // (Stripe needs a trial to end at least 48 hours from now)
+      const passEnd = current.source === 'pass' && current.current_period_end ? new Date(current.current_period_end).getTime() : 0;
+      const trialEnd = passEnd > Date.now() ? Math.floor(Math.max(passEnd, Date.now() + (48 * 3600 + 300) * 1000) / 1000) : null;
       const session = await stripeRequest(key, 'POST', 'checkout/sessions', {
         mode: 'subscription',
         customer,
@@ -131,7 +190,7 @@ Deno.serve(async (req) => {
         tax_id_collection: { enabled: true },
         customer_update: { address: 'auto', name: 'auto' },
         metadata: { user_id: user.id },
-        subscription_data: { metadata: { user_id: user.id } },
+        subscription_data: { metadata: { user_id: user.id }, ...(trialEnd ? { trial_end: trialEnd } : {}) },
         success_url: `${origin}/premium/welcome?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${origin}/premium?checkout=cancelled&from=${encodeURIComponent(safePath(body.from))}`,
       });
@@ -156,6 +215,12 @@ Deno.serve(async (req) => {
         if (session.client_reference_id !== user.id) return json({ error: 'This checkout belongs to a different account.' }, 403);
         customerId = session.customer;
         checkout = { status: session.status, payment_status: session.payment_status };
+        // A pass is a one-time payment, not a subscription: grant it from the session itself
+        if (session.metadata?.kind === 'premium_pass') {
+          const result = await grantPassFromSession(key, admin, session);
+          const { data: subscription } = await admin.from('subscriptions').select('*').eq('user_id', user.id).maybeSingle();
+          return json({ subscription, checkout: { ...checkout, kind: 'pass', result } });
+        }
       }
       if (!customerId) return json({ subscription: current, checkout });
       const subscription = await syncCustomer(key, admin, user.id, customerId);

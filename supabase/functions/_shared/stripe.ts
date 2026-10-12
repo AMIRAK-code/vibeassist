@@ -110,6 +110,7 @@ export function subscriptionRow(subscription: StripeSubscription) {
 // Minimal shape of the Supabase admin client, so this file needs no npm imports
 type AdminClient = {
   from: (table: string) => any;
+  rpc?: (fn: string, args: Record<string, unknown>) => any;
 };
 
 // Pulls the customer's subscriptions from Stripe and stores the one that matters on the
@@ -121,12 +122,14 @@ export async function syncCustomer(key: string, admin: AdminClient, userId: stri
   const now = new Date().toISOString();
 
   if (subscription) {
-    // Admin Premium is set by hand, so old Stripe subscriptions on the customer don't touch it
+    // Admin Premium is set by hand, so Stripe never touches it. A live subscription takes over
+    // from a pass; an ended one leaves an active pass alone.
+    const live = PREMIUM_STATUSES.has(subscription.status);
     const { error } = await admin
       .from('subscriptions')
       .update({ ...subscriptionRow(subscription), stripe_customer_id: customerId, updated_at: now })
       .eq('user_id', userId)
-      .neq('source', 'admin');
+      .in('source', live ? ['demo', 'stripe', 'pass'] : ['demo', 'stripe']);
     if (error) throw error;
   } else {
     // No subscription (checkout not finished yet): remember the customer, and only reset a
@@ -157,14 +160,29 @@ export const PREMIUM_PRICES = {
   yearly: { lookup_key: 'vibeassist_premium_yearly', unit_amount: 5988, interval: 'year' }, // $59.88, half of 12 × $9.99
 } as const;
 
-export async function premiumPrice(key: string, cycle: keyof typeof PREMIUM_PRICES): Promise<string> {
-  const spec = PREMIUM_PRICES[cycle];
+// The 'Limited Time Offer': one payment, 60 days of Premium, no renewal. Set PASS_OFFER_ENDS_AT
+// (an ISO date) to stop offering it after a day; without it the offer stays open.
+export const PREMIUM_PASS = { lookup_key: 'vibeassist_premium_pass_60d', unit_amount: 1299, days: 60 } as const; // $12.99
+
+export const passOfferOpen = (endsAt: string | null | undefined, now = new Date()) =>
+  !endsAt || Number.isNaN(new Date(endsAt).getTime()) || now < new Date(endsAt);
+
+export function premiumPrice(key: string, cycle: keyof typeof PREMIUM_PRICES): Promise<string> {
+  return ensurePrice(key, PREMIUM_PRICES[cycle]);
+}
+
+export const passPrice = (key: string) => ensurePrice(key, PREMIUM_PASS);
+
+// Finds the active price for a lookup key, or creates it (and retires an old amount).
+// Prices without an interval are one-time payments.
+export async function ensurePrice(key: string, spec: { lookup_key: string; unit_amount: number; interval?: string }): Promise<string> {
+  const interval = spec.interval ?? null;
   const found = await stripeRequest(key, 'GET', 'prices', { lookup_keys: [spec.lookup_key], active: true, limit: 1 });
   const existing = found.data?.[0];
   const current = existing?.id &&
     existing.unit_amount === spec.unit_amount &&
     existing.currency === 'usd' &&
-    existing.recurring?.interval === spec.interval;
+    (existing.recurring?.interval ?? null) === interval;
   if (current) {
     // A price made before tax was switched on: tell Stripe Tax that VAT goes on top
     if (existing.tax_behavior === 'unspecified') {
@@ -186,7 +204,7 @@ export async function premiumPrice(key: string, cycle: keyof typeof PREMIUM_PRIC
     product: PREMIUM_PRODUCT_ID,
     currency: 'usd',
     unit_amount: spec.unit_amount,
-    recurring: { interval: spec.interval },
+    ...(interval ? { recurring: { interval } } : {}),
     tax_behavior: 'exclusive',
     lookup_key: spec.lookup_key,
     transfer_lookup_key: true,
@@ -194,4 +212,33 @@ export async function premiumPrice(key: string, cycle: keyof typeof PREMIUM_PRIC
   // The old amount stops being offered; subscriptions already on it carry on unchanged
   if (existing?.id) await stripeRequest(key, 'POST', `prices/${existing.id}`, { active: false });
   return price.id;
+}
+
+// Grants the pass for a paid Checkout session (from the webhook or the return page; both may
+// arrive, the second gets 'already'). An account that can't have a pass is refunded at once.
+export async function grantPassFromSession(
+  key: string,
+  admin: AdminClient,
+  session: { id: string; payment_status?: string; client_reference_id?: string | null; metadata?: Record<string, string> | null; payment_intent?: string | { id: string } | null; amount_total?: number | null; currency?: string | null },
+): Promise<'granted' | 'already' | 'ineligible' | 'unpaid'> {
+  if (session.payment_status !== 'paid') return 'unpaid';
+  const userId = session.client_reference_id ?? session.metadata?.user_id;
+  const paymentIntent = typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id ?? null;
+  if (!admin.rpc) throw new Error('grantPassFromSession needs an admin client with rpc');
+  const { data, error } = await admin.rpc('grant_premium_pass', {
+    p_session: session.id,
+    p_user: userId,
+    p_payment_intent: paymentIntent,
+    p_amount: session.amount_total ?? null,
+    p_currency: session.currency ?? null,
+    p_days: PREMIUM_PASS.days,
+  });
+  if (error) throw error;
+  if (data === 'ineligible' && paymentIntent) {
+    await stripeRequest(key, 'POST', 'refunds', { payment_intent: paymentIntent, metadata: { reason: 'premium_pass_not_eligible' } });
+    const { error: markError } = await admin.from('premium_passes')
+      .upsert({ user_id: userId, checkout_session_id: session.id, payment_intent_id: paymentIntent, status: 'refunded_ineligible' }, { onConflict: 'checkout_session_id' });
+    if (markError) throw markError;
+  }
+  return data;
 }

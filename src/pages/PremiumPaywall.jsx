@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Check, Lock } from 'lucide-react';
+import { ArrowLeft, Check, Lock, Sparkles } from 'lucide-react';
 import { friendlyError, supabase } from '../lib/supabase';
-import { billingConfig, openBillingPortal, startCheckout } from '../lib/billing';
+import { billingConfig, openBillingPortal, startCheckout, startPassCheckout } from '../lib/billing';
 import { useAuth } from '../context/auth';
 import { useToast } from '../components/ui/toast-context';
 import BrandMark from '../components/landing/BrandMark';
@@ -10,17 +10,18 @@ import Notice from '../components/ui/Notice';
 import LegalLinks from '../components/LegalLinks';
 
 const FREE = [
-  'Overall Income: revenue, profit, downloads and conversion',
+  'Overall Income dashboard: revenue, profit, downloads and active users',
+  'Vibe-coding newsletter (the Weekly Vibe) and community threads',
+  'Legal & publishing guidelines for every store',
   'Add days by hand and export everything as CSV',
-  'Launch checklists for iOS, Android, web and Windows',
-  'Hacker News feed for app makers',
 ];
 const PREMIUM = [
-  'Weekly plan written by Claude from your own numbers',
-  'Ask questions about your numbers (30 advisor requests a day)',
-  'Import revenue from Stripe, or send numbers from your apps',
-  'Track ad campaigns with return on ad spend and cost per install',
+  'Advanced AI Business Analyzer and weekly plans (30 AI requests a day)',
+  'Ad Manager for Meta, Google, YouTube, TikTok, X and Apple Search Ads, with report imports',
+  'Full integrations: Stripe, App Store Connect and Google Play',
+  'Automated Legal Document Generator',
 ];
+const shortDate = (iso) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
 // Only allow returning to pages inside the app
 const safeReturn = (path) => (path && path.startsWith('/') && !path.startsWith('//') ? path : '/dashboard');
@@ -41,6 +42,8 @@ export default function PremiumPaywall() {
   const paid = hasPremium && subscription?.source === 'stripe';
   const demo = hasPremium && subscription?.source === 'demo';
   const admin = hasPremium && subscription?.source === 'admin';
+  const onPass = hasPremium && subscription?.source === 'pass';
+  const passEnds = onPass && subscription.current_period_end ? shortDate(subscription.current_period_end) : null;
 
   useEffect(() => {
     document.title = 'Plans · VibeAssist';
@@ -84,6 +87,7 @@ export default function PremiumPaywall() {
   };
 
   const unavailable = config?.configured === false;
+  const offer = config?.pass?.open && config.pass.eligible && !paid && !admin ? config.pass : null;
   // Must match PREMIUM_PRICES in supabase/functions/_shared/stripe.ts
   const price = cycle === 'monthly' ? '$9.99' : '$4.99';
 
@@ -94,8 +98,8 @@ export default function PremiumPaywall() {
           <Link to="/dashboard" className="auth-brand" style={{ marginBottom: 0 }}><BrandMark /> VibeAssist</Link>
           <Link to={returnTo} className="btn btn-ghost"><ArrowLeft aria-hidden="true" /> Back</Link>
         </div>
-        <h1>Plans</h1>
-        <p className="lead muted" style={{ marginTop: 4 }}>Start free. Upgrade when you want plans written from your numbers and automatic imports.</p>
+        <h1><Sparkles aria-hidden="true" className="paywall-mark" /> Unlock VibeAssist Premium</h1>
+        <p className="lead muted" style={{ marginTop: 4 }}>The whole toolset for growing your apps' profits. Start free; upgrade when you want the AI tools and automatic imports.</p>
 
         {cancelled && !paid && (
           <div style={{ marginTop: 16 }}><Notice tone="info">Checkout was cancelled, so you weren't charged. Pick a plan whenever you're ready.</Notice></div>
@@ -116,6 +120,22 @@ export default function PremiumPaywall() {
           </div>
         )}
 
+        {offer && (
+          <section className="card card--raised promo-card" aria-labelledby="promo-title">
+            <div>
+              <span className="badge badge--cobalt">{offer.ends_at ? 'Limited Time Offer!' : 'Try Premium'}</span>
+              <h2 id="promo-title">${(offer.amount / 100).toFixed(2)} for {offer.days / 30} months of every premium service</h2>
+              <p className="field-help">
+                One payment, no subscription: Premium for {offer.days} days, then you're back on Free unless you subscribe. Once per account; full refund within 14 days.
+                {offer.ends_at && ` Offer ends ${shortDate(offer.ends_at)}.`} Plus VAT where it applies.
+              </p>
+            </div>
+            <button type="button" className="btn btn-primary" onClick={() => leaveFor(() => startPassCheckout(returnTo), 'pass')} disabled={Boolean(busy) || unavailable} aria-busy={busy === 'pass'}>
+              {busy === 'pass' ? <><span className="spinner spinner--light" /> Opening checkout…</> : 'Claim Promo'}
+            </button>
+          </section>
+        )}
+
         <div className="segmented" role="group" aria-label="Billing" style={{ marginTop: 20 }}>
           <button type="button" aria-pressed={cycle === 'monthly'} onClick={() => setCycle('monthly')}>Monthly</button>
           <button type="button" aria-pressed={cycle === 'yearly'} onClick={() => setCycle('yearly')}>Yearly · 50% off</button>
@@ -128,6 +148,7 @@ export default function PremiumPaywall() {
             <ul>{FREE.map((f) => <li key={f}><Check aria-hidden="true" /> {f}</li>)}</ul>
             {!hasPremium && <button type="button" className="btn btn-secondary w-full" disabled>Your current plan</button>}
             {paid && <p className="field-help">To move to Free, cancel in Manage billing. Premium stays on until the end of the period you paid for.</p>}
+            {onPass && <p className="field-help">Your pass ends {passEnds}; after that you're on Free unless you subscribe.</p>}
             {demo && !confirmingFree && (
               <button type="button" className="btn btn-secondary w-full" onClick={() => setConfirmingFree(true)} disabled={Boolean(busy)}>Switch to Free</button>
             )}
@@ -165,7 +186,7 @@ export default function PremiumPaywall() {
                 disabled={Boolean(busy) || unavailable}
                 aria-busy={busy === 'checkout'}
               >
-                {busy === 'checkout' ? <><span className="spinner spinner--light" /> Opening checkout…</> : `Continue to checkout · ${cycle}`}
+                {busy === 'checkout' ? <><span className="spinner spinner--light" /> Opening checkout…</> : onPass ? `Subscribe · first charge ${passEnds}` : `Continue to checkout · ${cycle}`}
               </button>
             )}
             {!paid && !admin && (

@@ -51,12 +51,13 @@ export function Terms() {
         <li>Premium costs the price shown on the plans page, billed in advance every month or every year. Prices don't include VAT; where it applies, it's added at checkout based on where you are.</li>
         <li>Premium renews automatically until you cancel. Cancel any time in Settings → Manage billing; you keep Premium until the end of the period you've paid for, and you won't be charged again.</li>
         <li>If we change the price, we'll email you at least 30 days before it applies to your next renewal, so you can cancel first.</li>
+        <li>When it's on offer, the <strong>60-day pass</strong> is a single payment for 60 days of Premium. It doesn't renew and each account can buy it once. If you subscribe while it's running, your first subscription payment is taken when the pass ends.</li>
         <li>Payments are handled by Stripe. We never see or store your card details.</li>
       </ul>
       <p>Refunds are covered in the <Link to="/refunds">refund policy</Link>.</p>
 
-      <h2>Suggestions written by AI</h2>
-      <p>Weekly plans and answers are written by an AI model from the numbers you give us. They can be wrong or incomplete. They're suggestions, not financial, legal or tax advice; check them before you act on them.</p>
+      <h2>Suggestions and drafts written by AI</h2>
+      <p>Weekly plans, analyzer answers and legal document drafts are written by an AI model from the information you give us. They can be wrong or incomplete. They're suggestions and starting drafts, not financial, legal or tax advice; check them (and have a lawyer check legal documents) before you act on them or publish them.</p>
 
       <h2>Your data</h2>
       <p>What you enter or import stays yours. You let us store and process it only to run VibeAssist for you, as described in the <Link to="/privacy">privacy policy</Link>. You can export all your numbers from Settings at any time.</p>
@@ -129,6 +130,7 @@ export function Refunds() {
       <h2>Refunds</h2>
       <ul>
         <li><strong>First payment:</strong> if Premium isn't for you, ask within 14 days of your first payment and we'll refund it in full.</li>
+        <li><strong>60-day pass:</strong> ask within 14 days of paying and we'll refund it in full; Premium ends when the refund is made. If your account can't use the pass (for example it already has a subscription), we refund it automatically.</li>
         <li><strong>Renewals:</strong> a renewal that has already started isn't refunded, except where the law requires it or something went wrong on our side. If you forgot to cancel, write to us within 7 days of the renewal and we'll look at it.</li>
       </ul>
       <p>To ask for a refund, write to {detail('email')} from the email address of your account. Refunds go back to the card you paid with, usually within 5 to 10 working days.</p>

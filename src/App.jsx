@@ -79,7 +79,7 @@ function UpgradeCard({ subscription, onNavigate }) {
     : null;
   return (
     <div className="upgrade-card">
-      <p className="upgrade-card-title">{demoEnds ? `Your demo Premium ends ${demoEnds}` : "You're on the Free plan"}</p>
+      <p className="upgrade-card-title">{demoEnds ? `Your ${subscription.source === 'pass' ? 'pass' : 'demo Premium'} ends ${demoEnds}` : "You're on the Free plan"}</p>
       <p>Unlock the AI tools, integrations and the Ad Manager.</p>
       <Link to={`/premium?from=${encodeURIComponent(location.pathname)}`} className="btn btn-primary btn-sm w-full" onClick={onNavigate}>
         {demoEnds ? 'Subscribe' : 'Upgrade to Premium'}
@@ -92,7 +92,8 @@ function Sidebar({ open, onClose }) {
   const { user, hasPremium, subscription, signOut } = useAuth();
   const navigate = useNavigate();
   const demo = hasPremium && subscription?.source === 'demo';
-  const planName = !hasPremium ? 'Free plan' : demo ? 'Demo Premium' : subscription.source === 'admin' ? 'Admin Premium' : 'Premium';
+  const pass = hasPremium && subscription?.source === 'pass';
+  const planName = !hasPremium ? 'Free plan' : demo ? 'Demo Premium' : pass ? 'Premium pass' : subscription.source === 'admin' ? 'Admin Premium' : 'Premium';
   const firstLink = useRef(null);
 
   // Mobile drawer: move focus in when it opens, close with Escape
@@ -120,8 +121,8 @@ function Sidebar({ open, onClose }) {
           <div className="app-nav-divider" role="separator" />
           {PREMIUM_PAGES.map((item) => <NavItem key={item.to} item={item} hasPremium={hasPremium} onNavigate={onClose} />)}
         </nav>
-        {(!hasPremium || demo)
-          ? <UpgradeCard subscription={demo ? subscription : null} onNavigate={onClose} />
+        {(!hasPremium || demo || pass)
+          ? <UpgradeCard subscription={demo || pass ? subscription : null} onNavigate={onClose} />
           : <PremiumActiveCard onNavigate={onClose} />}
         <div className="app-sidebar-footer app-nav">
           <NavLink to="/settings" onClick={onClose}><SettingsIcon aria-hidden="true" /> Settings</NavLink>
