@@ -236,7 +236,7 @@ Deno.serve(async (req) => {
         let model = typeof body.model === 'string' ? body.model.trim() : '';
         if (keyId) {
           const { data: row } = await admin.from('gateway_provider_keys').select('id, provider').eq('id', keyId).eq('user_id', user.id).maybeSingle();
-          if (!row) return json({ error: 'That key isn't in your Smart Token Gateway any more.' }, 404);
+          if (!row) return json({ error: "That key isn't in your Smart Token Gateway any more." }, 404);
           if (!model && row.provider !== 'anthropic') return json({ error: `Enter the ${PROVIDERS[row.provider as Provider].label} model the checks should use.` }, 400);
         } else {
           model = '';
