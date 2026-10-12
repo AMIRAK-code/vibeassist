@@ -3,7 +3,7 @@ import { MessageSquare, RotateCcw, Send } from 'lucide-react';
 import { useAuth } from '../context/auth';
 import { callFunction, friendlyError, supabase } from '../lib/supabase';
 import { fetchMetrics, formatDay, summarize } from '../lib/metrics';
-import { formatCount, formatMoney } from '../lib/format';
+import { formatCount, formatMoney, formatMoneyExact } from '../lib/format';
 import { priceSignal, unitEconomics } from '../lib/unitEconomics';
 import { usePersistentState } from '../lib/usePersistentState';
 import PageHeader from '../components/ui/PageHeader';
@@ -31,7 +31,8 @@ function Figure({ label, value, hint }) {
 export default function AIAnalyzer() {
   const { profile } = useAuth();
   const currency = profile?.currency ?? 'USD';
-  const money = (v) => (v === null ? null : formatMoney(v, currency));
+  // Cents matter for per-user and per-install figures; whole units are enough for totals
+  const money = (v) => (v === null ? null : Math.abs(v) < 100 ? formatMoneyExact(v, currency) : formatMoney(v, currency));
   const [rows, setRows] = useState(null);
   const [campaignCount, setCampaignCount] = useState(0);
   const [requestsLeft, setRequestsLeft] = useState(null);
