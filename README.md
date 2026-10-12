@@ -32,6 +32,7 @@ Everything below lives in [`supabase/`](supabase/). The migrations up to `202610
 | `functions/community-feed` | Hacker News and Reddit threads and AI news, cached for everyone for 30 minutes |
 | `functions/newsletter`, `functions/weekly-digest` | Weekly Vibe double opt-in, unsubscribe and the Monday digest through Resend ([docs/newsletter.md](docs/newsletter.md)) |
 | `functions/engine`, `functions/engine-ingest`, `functions/gateway` | Anti-Fragile Engine: repo checks, reports from the GitHub Action in [`github-action/`](github-action/), and the Smart Token Gateway ([docs/engine.md](docs/engine.md)) |
+| `functions/handoffs` | Context Handoffs: condenses a chat into a handoff with the user's AI and saves only the handoff ([docs/handoffs.md](docs/handoffs.md)) |
 
 To take real payments at vibeassist.assist365.app, follow **[docs/go-live.md](docs/go-live.md)** step by step.
 

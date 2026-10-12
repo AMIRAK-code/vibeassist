@@ -92,6 +92,7 @@ export function Privacy() {
         <li><strong>Your profile:</strong> experience, profit target, goals, currency and launch checklist ticks. Used to tailor plans and remember your progress.</li>
         <li><strong>Your numbers:</strong> the daily figures and ad campaigns you enter, send through the Custom API, import as a CSV report, or import from Stripe, the App Store or Google Play. If you connect one of these, we keep your read-only key encrypted and import daily totals, not your customers' details.</li>
         <li><strong>Plans and questions:</strong> the plans you ask for and the questions you ask, plus a daily count of requests to enforce the limit.</li>
+        <li><strong>Context Handoffs:</strong> the handoffs you save and any share links you make. We never keep the chats they're written from: a chat you upload or paste is read in your browser, cleaned of keys and passwords, and only sent to an AI if you ask us to condense it. A share link lets anyone who has it read that one handoff, without seeing who shared it, until it expires or you revoke it.</li>
         <li><strong>The Weekly Vibe email</strong> (only if you subscribe): your subscription status, when and with which words you agreed, and whether to include your numbers. We send it on the basis of your consent, which you can withdraw at any time from any email or from Settings.</li>
         <li><strong>Billing:</strong> your plan, its status and renewal date, and the Stripe customer reference. Stripe holds your card and invoice details.</li>
       </ul>
@@ -102,6 +103,7 @@ export function Privacy() {
         <li><strong>Supabase</strong> stores the database and runs sign-in, in the EU (Frankfurt).</li>
         <li><strong>Stripe</strong> takes payments and handles tax on them.</li>
         <li><strong>Anthropic</strong> writes plans and answers. Only when you ask for one, it receives a summary of your numbers, your campaigns and your profile answers; never your email address or keys. It doesn't use this to train its models.</li>
+        <li>When you condense a chat into a handoff, its text (trimmed, with keys and passwords removed) goes to <strong>Anthropic</strong>, or, if you chose one of your own AI keys, to <strong>that provider</strong> under your own account and its terms. The chat isn't stored by us.</li>
         <li><strong>Apple</strong> and <strong>Google</strong>, only if you connect App Store Connect or Google Play: we read your sales and install reports from them with the key you gave us.</li>
         <li><strong>Cloudflare</strong> serves this website.</li>
         <li>Our <strong>email provider</strong> (Resend, EU region) sends sign-up and password emails and, if you subscribe, the Weekly Vibe. It doesn't track opens or clicks.</li>
@@ -110,7 +112,7 @@ export function Privacy() {
       <p>Some of these companies may process data outside the EU. Where they do, they're bound by the EU's Standard Contractual Clauses.</p>
 
       <h2>Cookies and storage</h2>
-      <p>We don't use advertising or analytics cookies. Your browser stores your sign-in session and a few view preferences (such as the period you last chose) so the app works. Stripe's checkout page sets its own cookies to process payments safely.</p>
+      <p>We don't use advertising or analytics cookies. Your browser stores your sign-in session, a few view preferences (such as the period you last chose) and drafts you haven't saved yet, which are cleared when you close the tab, so the app works. Stripe's checkout page sets its own cookies to process payments safely.</p>
 
       <h2>How long we keep it</h2>
       <p>We keep your data while you have an account. Ask us to delete your account and we'll delete your data within 30 days. Payment records are kept by Stripe and by us for as long as tax law requires (10 years in Italy).</p>
