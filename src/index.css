@@ -557,7 +557,28 @@ a.start-option:hover { border-color: var(--ci-cobalt); }
 .password-row .input-field { flex: 1; }
 .paywall { place-items: start center; }
 .paywall-inner { width: 100%; max-width: 820px; }
-.paywall h1 { font-size: 30px; }
+.onboarding-card { max-width: 480px; }
+.step-dots { display: flex; gap: 8px; list-style: none; padding: 0; margin: 0 0 14px; }
+.step-dots li { width: 28px; height: 6px; border-radius: 3px; background: var(--ci-rule); }
+.step-dots li.is-done { background: var(--ci-cobalt-light); }
+.step-dots li.is-current { background: var(--ci-cobalt); }
+.onboarding-step { font-size: 16px; margin-bottom: 12px; }
+.onboarding-step:focus { outline: none; }
+.goal-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.goal-option { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border: 1px solid var(--app-border); border-radius: var(--app-radius-sm); cursor: pointer; font-size: 14px; }
+.goal-option.is-on { border-color: var(--ci-cobalt); background: var(--ci-cobalt-tint); }
+.onboarding-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+@media (max-width: 640px) {
+  .goal-grid { grid-template-columns: 1fr; }
+}
+.paywall h1 { font-size: 30px; display: flex; align-items: center; gap: 10px; }
+.paywall-mark { width: 26px; height: 26px; color: var(--ci-cobalt); flex: none; }
+.promo-card { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 20px; border-color: #C9D3FF; background: var(--ci-cobalt-tint); }
+.promo-card h2 { font-size: 18px; margin: 8px 0 4px; }
+.promo-card .btn { flex: none; }
+@media (max-width: 640px) {
+  .promo-card { flex-direction: column; align-items: flex-start; }
+}
 .plan-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 16px; }
 .plan-option { display: flex; flex-direction: column; }
 .plan-option h2 { font-size: 18px; }

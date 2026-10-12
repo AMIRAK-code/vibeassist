@@ -1,14 +1,20 @@
 // Receives Stripe events and keeps each user's plan in step with their subscription:
-// new subscriptions, renewals, failed payments and cancellations.
+// new subscriptions, renewals, failed payments and cancellations, plus the one-time 60-day
+// pass (paid, expired, refunded). Add the async_payment_*, checkout.session.expired and
+// charge.refunded events to the webhook endpoint in Stripe for the pass.
 //
 // Stripe calls this without a Supabase session, so JWT checks are off and every request
 // must carry a valid Stripe-Signature for STRIPE_WEBHOOK_SECRET instead.
 // Secrets: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET.
 import { createClient } from 'npm:@supabase/supabase-js@2.117.2';
-import { StripeError, stripeRequest, syncCustomer, verifyStripeSignature } from '../_shared/stripe.ts';
+import { grantPassFromSession, StripeError, stripeRequest, syncCustomer, verifyStripeSignature } from '../_shared/stripe.ts';
 
 const HANDLED = new Set([
   'checkout.session.completed',
+  'checkout.session.async_payment_succeeded',
+  'checkout.session.async_payment_failed',
+  'checkout.session.expired',
+  'charge.refunded',
   'customer.subscription.created',
   'customer.subscription.updated',
   'customer.subscription.deleted',
@@ -50,12 +56,40 @@ Deno.serve(async (req) => {
   if (!HANDLED.has(event.type)) return json({ received: true, ignored: event.type });
 
   const object = event.data?.object ?? {};
-  const customerId = typeof object.customer === 'string' ? object.customer : object.customer?.id;
-  if (!customerId) return json({ received: true });
-
   const admin = createClient(Deno.env.get('SUPABASE_URL') ?? '', projectKey('SUPABASE_SECRET_KEYS', 'SUPABASE_SERVICE_ROLE_KEY'), {
     auth: { persistSession: false },
   });
+
+  // The one-time pass is settled from its own Checkout session and never syncs subscriptions,
+  // so a customer with no subscription doesn't lose a pass they just paid for
+  if (event.type.startsWith('checkout.session.') && object.metadata?.kind === 'premium_pass') {
+    try {
+      if (event.type === 'checkout.session.expired' || event.type === 'checkout.session.async_payment_failed') {
+        await admin.from('premium_passes').update({ status: 'expired' }).eq('checkout_session_id', object.id).eq('status', 'open');
+        return json({ received: true, pass: 'expired' });
+      }
+      const result = await grantPassFromSession(key, admin, object);
+      return json({ received: true, pass: result });
+    } catch (error) {
+      console.error('Pass webhook failed', event.type, error instanceof StripeError ? error.message : error);
+      return json({ error: 'retry' }, 500);
+    }
+  }
+
+  // A fully refunded pass payment ends the pass; other refunds don't change the plan here
+  if (event.type === 'charge.refunded') {
+    if (!object.refunded || !object.payment_intent) return json({ received: true });
+    const paymentIntent = typeof object.payment_intent === 'string' ? object.payment_intent : object.payment_intent.id;
+    const { data: revoked, error } = await admin.rpc('revoke_premium_pass', { p_payment_intent: paymentIntent });
+    if (error) {
+      console.error('Could not revoke the pass', error);
+      return json({ error: 'retry' }, 500);
+    }
+    return json({ received: true, pass_revoked: Boolean(revoked) });
+  }
+
+  const customerId = typeof object.customer === 'string' ? object.customer : object.customer?.id;
+  if (!customerId) return json({ received: true });
 
   try {
     // Who this customer is: the stored link first, then the user id attached at checkout

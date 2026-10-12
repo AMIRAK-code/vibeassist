@@ -4,7 +4,7 @@ export const isActivePremium = (subscription, now = new Date()) =>
   subscription?.plan === 'premium' &&
   (!subscription.current_period_end || new Date(subscription.current_period_end) > now);
 
-const CYCLES = { monthly: 'monthly', yearly: 'yearly', promo: 'two-month trial' };
+const CYCLES = { monthly: 'monthly', yearly: 'yearly', promo: 'two-month demo' };
 const formatDate = (iso) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
 // One line about the plan for Settings: what it is, and what happens next
@@ -17,6 +17,12 @@ export function planSummary(subscription, now = new Date()) {
   }
   const cycle = CYCLES[subscription.billing_cycle];
   const until = subscription.current_period_end ? formatDate(subscription.current_period_end) : null;
+  if (subscription.source === 'pass') {
+    return {
+      label: 'Premium, 60-day pass',
+      detail: until ? `Paid once. Premium until ${until}; it doesn't renew. Subscribe any time and the first charge waits until the pass ends.` : 'Paid once; it doesn’t renew.',
+    };
+  }
   if (subscription.source !== 'stripe') {
     return {
       label: `Premium (demo${cycle ? `, ${cycle}` : ''})`,
@@ -30,7 +36,7 @@ export function planSummary(subscription, now = new Date()) {
   if (subscription.cancel_at_period_end) {
     return { label, detail: until ? `Cancelled. Premium stays on until ${until}, then you're on Free.` : 'Cancelled.' };
   }
-  if (subscription.status === 'trialing') return { label, detail: until ? `Trial until ${until}.` : 'Trial.' };
+  if (subscription.status === 'trialing') return { label, detail: until ? `First payment on ${until}.` : 'No payment yet.' };
   return { label, detail: until ? `Renews on ${until}.` : 'Active.' };
 }
 
@@ -41,10 +47,13 @@ async function billing(body) {
   if (status === 200) return data;
   if (data?.error === 'not_configured') return { error: "Payments aren't switched on yet.", notConfigured: true };
   if (data?.error === 'already_subscribed') return { error: 'You already have Premium. Manage it from Settings.', alreadySubscribed: true };
+  if (data?.error === 'pass_used') return { error: 'The 60-day pass is once per account, and this account has had it.', passUsed: true };
+  if (data?.error === 'pass_unavailable') return { error: 'The 60-day pass offer has ended.', passUnavailable: true };
   return { error: data?.error ?? 'Could not reach billing. Check your connection and try again.' };
 }
 
 export const startCheckout = (cycle, from) => billing({ action: 'checkout', cycle, from });
+export const startPassCheckout = (from) => billing({ action: 'pass_checkout', from });
 export const openBillingPortal = () => billing({ action: 'portal' });
 export const syncBilling = (sessionId) => billing({ action: 'sync', session_id: sessionId || undefined });
 export const billingConfig = () => billing({ action: 'config' });

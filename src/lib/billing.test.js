@@ -42,3 +42,19 @@ describe('planSummary', () => {
     expect(planSummary(admin, now).label).toBe('Premium (admin)');
   });
 });
+
+describe('the 60-day pass', () => {
+  it('says it was paid once, when it ends and that it does not renew', () => {
+    const pass = { plan: 'premium', source: 'pass', billing_cycle: null, status: 'paid', current_period_end: later, cancel_at_period_end: true };
+    expect(planSummary(pass, now)).toEqual({
+      label: 'Premium, 60-day pass',
+      detail: "Paid once. Premium until Nov 1, 2026; it doesn't renew. Subscribe any time and the first charge waits until the pass ends.",
+    });
+    expect(planSummary({ ...pass, current_period_end: earlier }, now).label).toBe('Free');
+  });
+
+  it('describes a subscription waiting for its first payment', () => {
+    const trial = { plan: 'premium', source: 'stripe', billing_cycle: 'monthly', status: 'trialing', current_period_end: later };
+    expect(planSummary(trial, now).detail).toBe('First payment on Nov 1, 2026.');
+  });
+});

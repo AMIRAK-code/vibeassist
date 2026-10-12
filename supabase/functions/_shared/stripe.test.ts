@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { encodeForm, pickSubscription, premiumPrice, subscriptionRow, verifyStripeSignature } from './stripe.ts';
+import { encodeForm, grantPassFromSession, passOfferOpen, passPrice, pickSubscription, premiumPrice, subscriptionRow, syncCustomer, verifyStripeSignature } from './stripe.ts';
 
 // Answers Stripe requests in order and records what was asked
 function fakeStripe(responses: { status?: number; body: unknown }[]) {
@@ -143,5 +143,88 @@ describe('pickSubscription', () => {
   it('falls back to the newest one, or nothing', () => {
     expect(pickSubscription([{ id: 'a', status: 'canceled', created: 1 }, { id: 'b', status: 'canceled', created: 5 }])?.id).toBe('b');
     expect(pickSubscription([])).toBeNull();
+  });
+});
+
+// Records which rows each update would touch, like the Supabase query builder
+function fakeAdmin(rpcResult: unknown = 'granted') {
+  const updates: { table: string; values: Record<string, unknown>; filters: [string, unknown][] }[] = [];
+  const rpcs: { fn: string; args: Record<string, unknown> }[] = [];
+  const builder = (table: string, values?: Record<string, unknown>) => {
+    const entry = { table, values: values ?? {}, filters: [] as [string, unknown][] };
+    if (values) updates.push(entry);
+    const chain: any = {
+      eq: (col: string, v: unknown) => { entry.filters.push([`eq:${col}`, v]); return chain; },
+      in: (col: string, v: unknown) => { entry.filters.push([`in:${col}`, v]); return chain; },
+      neq: (col: string, v: unknown) => { entry.filters.push([`neq:${col}`, v]); return chain; },
+      select: () => chain,
+      maybeSingle: async () => ({ data: { plan: 'premium' }, error: null }),
+      then: (resolve: (r: unknown) => void) => resolve({ error: null }),
+    };
+    return chain;
+  };
+  const admin = {
+    from: (table: string) => ({
+      update: (values: Record<string, unknown>) => builder(table, values),
+      upsert: (values: Record<string, unknown>) => builder(table, values),
+      select: () => builder(table),
+    }),
+    rpc: async (fn: string, args: Record<string, unknown>) => {
+      rpcs.push({ fn, args });
+      return { data: rpcResult, error: null };
+    },
+  };
+  return { admin, updates, rpcs };
+}
+
+describe('the $12.99 pass', () => {
+  it('creates a one-time price without an interval and reuses it after', async () => {
+    const calls = fakeStripe([{ body: { data: [] } }, { body: { id: 'vibeassist_premium' } }, { body: { id: 'price_pass' } }]);
+    expect(await passPrice('rk_test')).toBe('price_pass');
+    const created = new URLSearchParams(calls[2].body);
+    expect(created.get('unit_amount')).toBe('1299');
+    expect(created.has('recurring[interval]')).toBe(false);
+    fakeStripe([{ body: { data: [{ id: 'price_pass', unit_amount: 1299, currency: 'usd', recurring: null, tax_behavior: 'exclusive' }] } }]);
+    expect(await passPrice('rk_test')).toBe('price_pass');
+  });
+
+  it('lets a live subscription replace a pass, but an ended one never touches it', async () => {
+    fakeStripe([{ body: { data: [{ id: 'sub_1', status: 'trialing', created: 1, items: { data: [{ price: { recurring: { interval: 'month' } } }] } }] } }]);
+    const live = fakeAdmin();
+    await syncCustomer('rk_test', live.admin, 'user-1', 'cus_1');
+    expect(live.updates[0].filters).toContainEqual(['in:source', ['demo', 'stripe', 'pass']]);
+
+    fakeStripe([{ body: { data: [{ id: 'sub_old', status: 'canceled', created: 1 }] } }]);
+    const ended = fakeAdmin();
+    await syncCustomer('rk_test', ended.admin, 'user-1', 'cus_1');
+    expect(ended.updates[0].filters).toContainEqual(['in:source', ['demo', 'stripe']]);
+
+    fakeStripe([{ body: { data: [] } }]);
+    const none = fakeAdmin();
+    await syncCustomer('rk_test', none.admin, 'user-1', 'cus_1');
+    expect(none.updates[1].filters).toContainEqual(['eq:source', 'stripe']);
+  });
+
+  it('grants a paid checkout once and refunds an account that cannot have a pass', async () => {
+    const session = { id: 'cs_test_1', payment_status: 'paid', client_reference_id: 'user-1', payment_intent: 'pi_1', amount_total: 1299, currency: 'usd' };
+    const granted = fakeAdmin('granted');
+    expect(await grantPassFromSession('rk_test', granted.admin, session)).toBe('granted');
+    expect(granted.rpcs[0]).toEqual({ fn: 'grant_premium_pass', args: { p_session: 'cs_test_1', p_user: 'user-1', p_payment_intent: 'pi_1', p_amount: 1299, p_currency: 'usd', p_days: 60 } });
+
+    const calls = fakeStripe([{ body: { id: 're_1' } }]);
+    const ineligible = fakeAdmin('ineligible');
+    expect(await grantPassFromSession('rk_test', ineligible.admin, session)).toBe('ineligible');
+    expect(calls[0].path).toBe('refunds');
+    expect(new URLSearchParams(calls[0].body).get('payment_intent')).toBe('pi_1');
+    expect(ineligible.updates[0].values).toMatchObject({ status: 'refunded_ineligible' });
+
+    expect(await grantPassFromSession('rk_test', fakeAdmin().admin, { ...session, payment_status: 'unpaid' })).toBe('unpaid');
+  });
+
+  it('can be closed with an end date', () => {
+    const now = new Date('2026-10-08T12:00:00Z');
+    expect(passOfferOpen(null, now)).toBe(true);
+    expect(passOfferOpen('2026-11-01', now)).toBe(true);
+    expect(passOfferOpen('2026-10-01', now)).toBe(false);
   });
 });
