@@ -20,6 +20,7 @@ const PREMIUM = [
   'Ad Manager for Meta, Google, YouTube, TikTok, X and Apple Search Ads, with report imports',
   'Full integrations: Stripe, App Store Connect and Google Play',
   'Automated Legal Document Generator',
+  'Anti-Fragile Engine: AI code reviews, secret scans, mutation tests and an LLM gateway',
 ];
 const shortDate = (iso) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 

@@ -1,6 +1,6 @@
 import React, { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { BadgeCheck, Cpu, LayoutDashboard, ListChecks, Lock, Megaphone, Newspaper, Settings as SettingsIcon, ShieldAlert, TrendingUp, LogOut, Menu, X } from 'lucide-react';
+import { BadgeCheck, Cpu, LayoutDashboard, ShieldCheck, ListChecks, Lock, Megaphone, Newspaper, Settings as SettingsIcon, ShieldAlert, TrendingUp, LogOut, Menu, X } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { AuthProvider } from './context/AuthContext';
 import { useAuth } from './context/auth';
@@ -21,6 +21,8 @@ const PremiumPaywall = lazy(() => import('./pages/PremiumPaywall'));
 const Integrations = lazy(() => import('./pages/Integrations'));
 const Plan = lazy(() => import('./pages/Plan'));
 const AIAnalyzer = lazy(() => import('./pages/AIAnalyzer'));
+const Orchestrator = lazy(() => import('./pages/Orchestrator'));
+const OrchestratorApi = lazy(() => import('./pages/OrchestratorApi'));
 const Publishing = lazy(() => import('./pages/Publishing'));
 const CampaignOverview = lazy(() => import('./pages/CampaignOverview'));
 const Newsletter = lazy(() => import('./pages/Newsletter'));
@@ -42,6 +44,7 @@ const PREMIUM_PAGES = [
   { to: '/ai-analyzer', label: 'AI Business Analyzer', icon: Cpu, premium: true },
   { to: '/plan', label: 'Weekly Plan', icon: ListChecks, premium: true },
   { to: '/ads', label: 'Ad Manager', icon: Megaphone, premium: true },
+  { to: '/orchestrator', label: 'Anti-Fragile Engine', icon: ShieldCheck, premium: true },
 ];
 const ALL_PAGES = [...FREE_PAGES, ...PREMIUM_PAGES, { to: '/settings', label: 'Settings' }];
 
@@ -277,6 +280,10 @@ function App() {
               <Route element={<PremiumRoute feature="ai-analyzer" />}>
                 <Route path="/ai-analyzer" element={<AIAnalyzer />} />
               </Route>
+              <Route element={<PremiumRoute feature="orchestrator" />}>
+                <Route path="/orchestrator" element={<Orchestrator />} />
+                <Route path="/orchestrator/api" element={<OrchestratorApi />} />
+              </Route>
               <Route element={<PremiumRoute feature="plan" />}>
                 <Route path="/plan" element={<Plan />} />
               </Route>
@@ -293,7 +300,6 @@ function App() {
             <Route path="/data-sources" element={<Navigate to="/integrations" replace />} />
             <Route path="/launch" element={<Navigate to="/publishing" replace />} />
             <Route path="/news" element={<Navigate to="/newsletter" replace />} />
-            <Route path="/orchestrator" element={<Navigate to="/dashboard" replace />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Router>

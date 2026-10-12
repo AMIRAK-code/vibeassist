@@ -3,6 +3,11 @@ import { Link } from 'react-router-dom';
 import PageHeader from './ui/PageHeader';
 
 const FEATURES = {
+  orchestrator: {
+    title: 'Anti-Fragile Engine',
+    what: 'Guard the code you write with AI tools: secret and dependency scans, adversarial security and architecture reviews, drift from your own architecture rules, mutation testing, screenshot checks, snapshots you can rewind to, and an LLM gateway with fallbacks.',
+    path: '/orchestrator',
+  },
   'ai-analyzer': {
     title: 'AI Business Analyzer',
     what: 'See cost per install, revenue per user, payback and lifetime value worked out from your numbers, check how buyers reacted to price changes, and chat with Claude about your last 90 days.',
