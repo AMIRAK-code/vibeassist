@@ -6,6 +6,7 @@ import { useToast } from './ui/toast-context';
 import { callFunction, friendlyError, supabase } from '../lib/supabase';
 import { usePersistentState } from '../lib/usePersistentState';
 import { formatDateTime } from '../lib/format';
+import { download } from '../lib/download';
 import {
   bodyBlocks, countPlaceholders, DATA_OPTIONS, DOC_KINDS, EMPTY_INPUTS, fileName, kindLabel, MONETIZATION_OPTIONS,
   PLATFORM_OPTIONS, SERVICE_OPTIONS, toHtml, toMarkdown, toPlainText, validateInputs,
@@ -14,17 +15,6 @@ import Notice from './ui/Notice';
 import Elapsed from './ui/Elapsed';
 
 const DAILY_LIMIT = 30;
-
-function download(name, text, type) {
-  const url = URL.createObjectURL(new Blob([text], { type }));
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = name;
-  document.body.append(link);
-  link.click();
-  link.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
 
 function Checkboxes({ legend, name, options, value, onChange, error }) {
   const toggle = (option) => onChange(value.includes(option) ? value.filter((v) => v !== option) : [...value, option]);

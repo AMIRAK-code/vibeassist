@@ -1,6 +1,6 @@
 import React, { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { BadgeCheck, Cpu, LayoutDashboard, ShieldCheck, ListChecks, Lock, Megaphone, Newspaper, Settings as SettingsIcon, ShieldAlert, TrendingUp, LogOut, Menu, X } from 'lucide-react';
+import { ArrowRightLeft, BadgeCheck, Cpu, LayoutDashboard, ShieldCheck, ListChecks, Lock, Megaphone, Newspaper, Settings as SettingsIcon, ShieldAlert, TrendingUp, LogOut, Menu, X } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { AuthProvider } from './context/AuthContext';
 import { PresetProvider } from './context/PresetContext';
@@ -28,6 +28,8 @@ const OrchestratorApi = lazy(() => import('./pages/OrchestratorApi'));
 const Publishing = lazy(() => import('./pages/Publishing'));
 const CampaignOverview = lazy(() => import('./pages/CampaignOverview'));
 const Newsletter = lazy(() => import('./pages/Newsletter'));
+const Handoffs = lazy(() => import('./pages/Handoffs'));
+const SharedHandoff = lazy(() => import('./pages/SharedHandoff'));
 const NewsletterConfirm = lazy(() => import('./pages/NewsletterLinks').then((m) => ({ default: m.NewsletterConfirm })));
 const NewsletterUnsubscribe = lazy(() => import('./pages/NewsletterLinks').then((m) => ({ default: m.NewsletterUnsubscribe })));
 const Settings = lazy(() => import('./pages/Settings'));
@@ -40,6 +42,7 @@ const FREE_PAGES = [
   { to: '/dashboard', label: 'Overall Income', icon: LayoutDashboard },
   { to: '/publishing', label: 'Legal & Publishing', icon: ShieldAlert },
   { to: '/newsletter', label: 'News & Newsletter', icon: Newspaper },
+  { to: '/handoffs', label: 'Context Handoffs', icon: ArrowRightLeft },
 ];
 const PREMIUM_PAGES = [
   { to: '/integrations', label: 'Integrations', icon: TrendingUp, premium: true },
@@ -275,11 +278,13 @@ function App() {
               <Route path="/refunds" element={<Suspense fallback={<FullPageSpinner />}><Refunds /></Suspense>} />
               <Route path="/newsletter/confirm" element={<Suspense fallback={<FullPageSpinner />}><NewsletterConfirm /></Suspense>} />
               <Route path="/newsletter/unsubscribe" element={<Suspense fallback={<FullPageSpinner />}><NewsletterUnsubscribe /></Suspense>} />
+              <Route path="/handoff" element={<Suspense fallback={<FullPageSpinner />}><SharedHandoff /></Suspense>} />
 
               <Route element={<AuthRoute />}>
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/publishing" element={<Publishing />} />
                 <Route path="/newsletter" element={<Newsletter />} />
+                <Route path="/handoffs" element={<Handoffs />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/premium/welcome" element={<CheckoutReturn />} />
                 <Route element={<PremiumRoute feature="ai-analyzer" />}>
