@@ -5,12 +5,13 @@
 -- background worker; nothing in the examer schema is touched. The job name is prefixed
 -- vibeassist- so it can't clash with anything else.
 --
--- Before applying, add the shared secret once by hand (so it never lands in git), using the
--- same value as the weekly-digest function's CRON_SECRET:
---   select vault.create_secret('<long random value>', 'vibeassist_cron_secret', 'VibeAssist: weekly digest cron');
+-- Before applying, let the database make the shared secret once (so it never lands in git or a
+-- chat), then copy it into the weekly-digest function's CRON_SECRET:
+--   select vault.create_secret(encode(extensions.gen_random_bytes(32), 'hex'), 'vibeassist_cron_secret', 'VibeAssist: weekly digest cron');
+--   select decrypted_secret from vault.decrypted_secrets where name = 'vibeassist_cron_secret';
 
 create extension if not exists pg_cron with schema pg_catalog;
-create extension if not exists pg_net;
+create extension if not exists pg_net with schema extensions;
 
 -- Every 10 minutes from 08:00 to 11:50 UTC on Mondays (09:00–12:50 in Rome in winter).
 -- The first run creates the issue and sends; later runs finish a long list or retry failures.
