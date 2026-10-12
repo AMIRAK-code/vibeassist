@@ -39,7 +39,6 @@ Nothing is emailed while these are blank, because EU rules require them in every
 | `RESEND_API_KEY` | the sending key from step 3 |
 | `NEWSLETTER_FROM` | `The Weekly Vibe <newsletter@assist365.app>` |
 | `SITE_URL` | `https://vibeassist.assist365.app` (already set for billing) |
-| `CRON_SECRET` | the value the database made for the schedule (step 5) |
 | `NEWSLETTER_OWNER_EMAILS` | your account email(s), comma separated. Owners can send a test and run an issue by hand. |
 | `REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET` | optional. Create a "script" app at reddit.com/prefs/apps. Reddit's terms may need their approval for commercial use. |
 | `REDDIT_USER_AGENT` | optional, for example `web:app.assist365.vibeassist:1.0 (by /u/yourname)` |
@@ -49,12 +48,14 @@ Nothing is emailed while these are blank, because EU rules require them in every
 **This changes the whole shared Supabase project.** It turns on `pg_cron`, and `pg_net` in the
 `extensions` schema. Done on the live project on October 12, 2026.
 
-1. Let the database make the shared secret, so it never appears anywhere else:
+1. Let the database make the job's secret, so it never appears anywhere else:
    `select vault.create_secret(encode(extensions.gen_random_bytes(32), 'hex'), 'vibeassist_cron_secret', 'VibeAssist: weekly digest cron');`
-2. Apply `supabase/migrations/20261008130000_weekly_vibe_schedule.sql`.
-3. Copy the value into the `CRON_SECRET` function secret. Read it in the SQL editor with
-   `select decrypted_secret from vault.decrypted_secrets where name = 'vibeassist_cron_secret';`
-   Until the two match, the job's calls are turned away and nothing is sent.
+2. Apply `supabase/migrations/20261008130000_weekly_vibe_schedule.sql` and
+   `20261012110000_cron_secret_from_vault.sql`.
+
+The job sends the secret from Vault, and `weekly-digest` checks it against Vault too, so there's
+nothing to copy into the function's settings. (A `CRON_SECRET` function secret still works if
+you ever want a second value, for example to run an issue from a script.)
 
 The job `vibeassist-weekly-vibe` runs every 10 minutes from 08:00 to 11:50 UTC on Mondays:
 

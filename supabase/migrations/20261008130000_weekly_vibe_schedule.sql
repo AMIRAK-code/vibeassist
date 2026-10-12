@@ -6,9 +6,8 @@
 -- vibeassist- so it can't clash with anything else.
 --
 -- Before applying, let the database make the shared secret once (so it never lands in git or a
--- chat), then copy it into the weekly-digest function's CRON_SECRET:
+-- chat). weekly-digest reads the same Vault secret (20261012110000_cron_secret_from_vault.sql):
 --   select vault.create_secret(encode(extensions.gen_random_bytes(32), 'hex'), 'vibeassist_cron_secret', 'VibeAssist: weekly digest cron');
---   select decrypted_secret from vault.decrypted_secrets where name = 'vibeassist_cron_secret';
 
 create extension if not exists pg_cron with schema pg_catalog;
 create extension if not exists pg_net with schema extensions;

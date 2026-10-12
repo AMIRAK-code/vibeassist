@@ -1,13 +1,15 @@
 // Sends the Weekly Vibe: this week's top threads and AI news, plus each subscriber's own numbers.
 //
-// POST { action: 'run' }        with header x-cron-secret: CRON_SECRET (the Monday cron job), or an owner's session
+// POST { action: 'run' }        with header x-cron-secret (the Monday cron job), or an owner's session
 //   -> 202; creates this week's issue once and sends it in batches of 100. Safe to call again:
 //      every subscriber gets at most one email per week.
 // POST { action: 'preview' }    (signed in) -> { subject, html, text, owner } built from your own numbers
 // POST { action: 'test_send' }  (owner)     -> sends the preview to your own address with "[Test]"
 //
-// Deploy with JWT checks off (the cron job has no user session); auth is checked here.
-// Secrets: RESEND_API_KEY, NEWSLETTER_FROM, CRON_SECRET, NEWSLETTER_OWNER_EMAILS (comma separated), SITE_URL.
+// Deploy with JWT checks off (the cron job has no user session); auth is checked here. The cron
+// job's secret is the Vault secret vibeassist_cron_secret, read here through newsletter_cron_secret().
+// Secrets: RESEND_API_KEY, NEWSLETTER_FROM, NEWSLETTER_OWNER_EMAILS (comma separated), SITE_URL.
+// CRON_SECRET is optional: if set, it's accepted as well.
 import { createClient } from 'npm:@supabase/supabase-js@2.117.2';
 import { corsHeaders, json, projectKey } from '../_shared/http.ts';
 import { buildFeed, type FeedItem, type FeedName, type RedditCredentials } from '../_shared/feeds.ts';
@@ -141,7 +143,13 @@ Deno.serve(async (req) => {
     return json({ error: 'Send a JSON body.' }, 400);
   }
 
-  const fromCron = sameSecret(req.headers.get('x-cron-secret') ?? '', Deno.env.get('CRON_SECRET') ?? '');
+  // The scheduled job sends the Vault secret; only look it up when a request claims to be the job
+  const cronHeader = req.headers.get('x-cron-secret') ?? '';
+  let fromCron = false;
+  if (cronHeader) {
+    const { data: vaultSecret } = await admin.rpc('newsletter_cron_secret');
+    fromCron = sameSecret(cronHeader, vaultSecret ?? '') || sameSecret(cronHeader, Deno.env.get('CRON_SECRET') ?? '');
+  }
   let user: { id: string; email?: string } | null = null;
   if (!fromCron) {
     const authHeader = req.headers.get('Authorization') ?? '';
