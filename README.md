@@ -18,7 +18,7 @@ The live site is https://vibeassist.assist365.app, a Cloudflare Worker that serv
 
 ## Supabase setup
 
-Everything below lives in [`supabase/`](supabase/) and is already applied to the project `thwxxgibcbxkfodzoedb`.
+Everything below lives in [`supabase/`](supabase/). The migrations up to `20261005090000_admin_premium.sql` are applied to the project `thwxxgibcbxkfodzoedb`; the ones dated 2026-10-08 come with the restored features and still need applying, in order.
 
 | Piece | What it does |
 |---|---|
@@ -27,7 +27,11 @@ Everything below lives in [`supabase/`](supabase/) and is already applied to the
 | `functions/stripe-sync` | Connects a user's Stripe restricted key (stored in Vault) and imports their daily revenue |
 | `functions/store-sync` | Connects App Store Connect (API key, Sales role) or Google Play (service account + report bucket), stored in Vault, and imports daily downloads, purchases and revenue |
 | `functions/billing` | Premium checkout, the Stripe billing portal and on-demand subscription checks |
-| `functions/stripe-webhook` | Keeps plans in step with Stripe: new subscriptions, renewals, failed payments, cancellations |
+| `functions/stripe-webhook` | Keeps plans in step with Stripe: new subscriptions, renewals, failed payments, cancellations, and the one-time 60-day pass |
+| `functions/legal-docs` | Drafts a privacy policy, terms or EULA with Claude from the user's answers |
+| `functions/community-feed` | Hacker News and Reddit threads and AI news, cached for everyone for 30 minutes |
+| `functions/newsletter`, `functions/weekly-digest` | Weekly Vibe double opt-in, unsubscribe and the Monday digest through Resend ([docs/newsletter.md](docs/newsletter.md)) |
+| `functions/engine`, `functions/engine-ingest`, `functions/gateway` | Anti-Fragile Engine: repo checks, reports from the GitHub Action in [`github-action/`](github-action/), and the Smart Token Gateway ([docs/engine.md](docs/engine.md)) |
 
 To take real payments at vibeassist.assist365.app, follow **[docs/go-live.md](docs/go-live.md)** step by step.
 
