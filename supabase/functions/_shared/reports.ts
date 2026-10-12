@@ -9,8 +9,9 @@ async function pipeThrough(bytes: Uint8Array, format: 'gzip' | 'deflate-raw'): P
 
 export const gunzip = (bytes: Uint8Array) => pipeThrough(bytes, 'gzip');
 
-// Reads every file in a .zip archive (stored or deflated entries, which is what Google uses)
-export async function unzipEntries(bytes: Uint8Array): Promise<{ name: string; data: Uint8Array }[]> {
+// Reads the files in a .zip archive (stored or deflated entries, which is what Google uses).
+// `keep` picks entries by name, so a large export doesn't unpack every image inside it.
+export async function unzipEntries(bytes: Uint8Array, keep: (name: string) => boolean = () => true): Promise<{ name: string; data: Uint8Array }[]> {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   let end = -1;
   for (let i = bytes.length - 22; i >= Math.max(0, bytes.length - 65557); i--) {
@@ -34,7 +35,7 @@ export async function unzipEntries(bytes: Uint8Array): Promise<{ name: string; d
     const localOffset = view.getUint32(offset + 42, true);
     const name = utf8.decode(bytes.subarray(offset + 46, offset + 46 + nameLength));
     offset += 46 + nameLength + extraLength + commentLength;
-    if (name.endsWith('/')) continue; // folder
+    if (name.endsWith('/') || !keep(name)) continue; // folder, or not wanted
     const localNameLength = view.getUint16(localOffset + 26, true);
     const localExtraLength = view.getUint16(localOffset + 28, true);
     const start = localOffset + 30 + localNameLength + localExtraLength;
