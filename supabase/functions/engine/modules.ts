@@ -26,6 +26,7 @@ export type ModuleResult = { findings: Finding[]; summary: string; stats: Record
 
 const MAX_SECRET_FILES = 300;
 const MAX_SECRET_BYTES = 2_000_000;
+const SEVERITIES: string[] = ['critical', 'high', 'medium', 'low', 'info'];
 
 export async function runPreflight(ctx: Ctx): Promise<ModuleResult> {
   const { token, repo, sha, log } = ctx;
@@ -151,14 +152,20 @@ export async function runRedTeam(ctx: Ctx, ai: EngineAi): Promise<ModuleResult> 
       await ctx.log('warn', `${name} reviewer ${result.value.refused ? 'declined to review this code' : 'returned an unreadable answer'}`);
       continue;
     }
-    const review = result.value.data;
+    // Models outside Claude's structured output can drop or misname fields; keep what's usable
+    const raw = result.value.data;
+    const review = {
+      summary: String(raw.summary ?? ''),
+      verdict: String(raw.verdict ?? 'unclear'),
+      findings: (Array.isArray(raw.findings) ? raw.findings : []).filter((f) => f && typeof f === 'object' && f.title),
+    };
     verdicts[name.toLowerCase()] = review.verdict;
     summaries.push(`${name}: ${review.summary}`);
     for (const f of review.findings.slice(0, 15)) {
       findings.push(verifyFinding({
-        module: 'red_team', severity: f.severity, category: `${name.toLowerCase()}/${f.category}`, title: f.title,
-        file: f.file, line_start: f.line_start || null, line_end: f.line_end || null, evidence: f.evidence,
-        explanation: f.why, fix: f.fix, confidence: f.confidence,
+        module: 'red_team', severity: SEVERITIES.includes(f.severity) ? f.severity : 'medium', category: `${name.toLowerCase()}/${f.category ?? 'general'}`, title: String(f.title).slice(0, 200),
+        file: f.file ? String(f.file) : null, line_start: Number.isInteger(f.line_start) ? f.line_start || null : null, line_end: Number.isInteger(f.line_end) ? f.line_end || null : null, evidence: f.evidence ? String(f.evidence) : null,
+        explanation: f.why ? String(f.why) : null, fix: f.fix ? String(f.fix) : null, confidence: ['high', 'medium', 'low'].includes(f.confidence) ? f.confidence : 'medium',
       }, texts));
     }
     await ctx.log('ok', `${name} reviewer: ${review.findings.length} finding${review.findings.length === 1 ? '' : 's'}, verdict ${review.verdict.replace(/_/g, ' ')}`);
@@ -210,7 +217,7 @@ export async function runDrift(ctx: Ctx, rules: Rule[], ai: EngineAi | null): Pr
     await ctx.log(violations ? 'warn' : 'ok', `Rule "${rule.title}": ${violations ? `${violations} violation${violations === 1 ? '' : 's'}` : texts.size ? 'followed' : 'no matching files'}`);
   }
 
-  // Plain-language rules: one Claude call over the files any of them covers
+  // Plain-language rules: one AI call over the files any of them covers
   const aiRules = rules.filter((r) => r.kind === 'ai');
   let model: string | null = null;
   if (aiRules.length) {
@@ -222,12 +229,12 @@ export async function runDrift(ctx: Ctx, rules: Rule[], ai: EngineAi | null): Pr
     await ctx.log('info', `Checking ${aiRules.length} written rule${aiRules.length === 1 ? '' : 's'} against ${context.included.length} files`);
     const result = await structuredCall<DriftAnswer>(ai, ctx.admin, ctx.userId, [DRIFT, ruleBlock, context.text], 'Check each rule against the code.', DRIFT_SCHEMA);
     model = result.model;
-    if (!result.data) throw new Error(result.refused ? 'Claude declined to check these rules.' : 'The rule check came back unreadable. Try again.');
-    for (const r of result.data.rules) {
-      const rule = aiRules.find((x) => x.id === r.rule_id);
+    if (!result.data) throw new Error(result.refused ? `${ai.label === 'VibeAssist' ? 'The AI' : ai.label} declined to check these rules.` : 'The rule check came back unreadable. Try a newer or larger model, or try again.');
+    for (const r of Array.isArray(result.data.rules) ? result.data.rules : []) {
+      const rule = aiRules.find((x) => x.id === r?.rule_id);
       if (!rule) continue;
-      statuses.push({ id: rule.id, title: rule.title, status: r.status });
-      for (const v of r.violations.slice(0, 5)) {
+      statuses.push({ id: rule.id, title: rule.title, status: ['followed', 'violated', 'not_applicable', 'unclear'].includes(r.status) ? r.status : 'unclear' });
+      for (const v of (Array.isArray(r.violations) ? r.violations : []).filter((x) => x && typeof x === 'object').slice(0, 5)) {
         findings.push(verifyFinding({ module: 'drift', rule_id: rule.id, severity: rule.severity, category: 'rule', title: rule.title, file: v.file, line_start: v.line_start || null, line_end: v.line_end || null, evidence: v.evidence, explanation: rule.body, fix: v.fix, confidence: 'medium' }, texts));
       }
     }

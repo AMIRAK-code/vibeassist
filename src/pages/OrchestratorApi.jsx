@@ -92,7 +92,7 @@ export default function OrchestratorApi() {
           <div><dt><code>module</code></dt><dd><code>mutation</code>, <code>vision</code> or <code>snapshot</code></dd></div>
           <div><dt><code>status</code></dt><dd><code>succeeded</code>, <code>failed</code> or <code>skipped</code></dd></div>
           <div><dt><code>findings[]</code></dt><dd>Up to 200: <code>severity</code> (critical, high, medium, low, info), <code>title</code>, and optionally <code>category</code>, <code>file</code>, <code>line_start</code>, <code>line_end</code>, <code>evidence</code>, <code>explanation</code>, <code>fix</code>. Evidence that looks like a secret is removed.</dd></div>
-          <div><dt><code>images[]</code></dt><dd>Vision only: up to 6 JPEG screenshots <code>{'{ url, viewport, data }'}</code> (base64, 1.5 MB each). Claude checks them for layout problems; at most 8 checks a day.</dd></div>
+          <div><dt><code>images[]</code></dt><dd>Vision only: up to 6 JPEG screenshots <code>{'{ url, viewport, data }'}</code> (base64, 1.5 MB each). Your Engine AI checks them for layout problems (choose a model that accepts images); at most 8 checks a day.</dd></div>
           <div><dt><code>snapshot</code></dt><dd>Snapshot only: <code>{'{ tag: "vibe-snapshot-…", branch, checks }'}</code></dd></div>
           <div><dt>Reply</dt><dd><code>{'{ run_id, url }'}</code>, where <code>url</code> opens the run in VibeAssist.</dd></div>
           <div><dt>Errors</dt><dd>401 bad key or Premium ended · 404 repository not added · 400 bad body.</dd></div>

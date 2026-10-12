@@ -31,10 +31,25 @@ export const PROVIDERS = {
   deepseek: { label: 'DeepSeek', format: 'openai', example: 'deepseek-chat' },
 };
 
+// Without a saved choice the engine uses the newest Anthropic gateway key, else VibeAssist's Claude
+export function effectiveAiChoice(settings, providerKeys) {
+  if (settings) return { keyId: settings.provider_key_id ?? '', model: settings.model ?? '' };
+  const anthropic = providerKeys.filter((k) => k.provider === 'anthropic').at(-1);
+  return { keyId: anthropic?.id ?? '', model: '' };
+}
+
+// What the module tiles say about the AI they use
+export function aiLabel(settings, providerKeys) {
+  const { keyId, model } = effectiveAiChoice(settings, providerKeys);
+  const key = providerKeys.find((k) => k.id === keyId);
+  if (!key) return "VibeAssist's Claude";
+  return `your ${PROVIDERS[key.provider].label} key${model ? ` (${model})` : ''}`;
+}
+
 export async function engine(action, body = {}) {
   const { data, status } = await callFunction('engine', { action, ...body });
   if (status === 200) return data;
-  return { error: data?.error === 'not_configured' ? 'No Anthropic key is set up for the engine yet: add ANTHROPIC_API_KEY in Supabase, or your own Anthropic key in the Smart Token Gateway.' : data?.error ?? 'The engine couldn\'t do that. Try again.' };
+  return { error: data?.error === 'not_configured' ? 'No AI key is set up for the engine yet: choose one of your own provider keys under Engine AI, or add ANTHROPIC_API_KEY in Supabase.' : data?.error ?? 'The engine couldn\'t do that. Try again.' };
 }
 
 // "a few seconds ago" style for the log and run list

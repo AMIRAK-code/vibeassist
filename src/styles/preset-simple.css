@@ -1,0 +1,131 @@
+/* Simple preset: the soft clay look from the VibeAssist promo (Outfit, clay blue #2B75E8 →
+   #8CB9F0, bone surfaces with one light from the upper left, carved-in inputs). It only
+   restyles the signed-in app: App's MainLayout sets html[data-preset="simple"] while the app is
+   on screen, so the landing page and the other public pages never see these rules.
+   Layout and breakpoints are shared with the Advanced design (index.css); this file changes
+   tokens, surfaces and touch targets only. Fonts are self-hosted (SIL Open Font License 1.1). */
+@import '@fontsource-variable/outfit/wght.css';
+
+html[data-preset='simple'] {
+  /* Creative Instrument tokens, remapped */
+  --ci-ivory: #F2F0EA;
+  --ci-ink: #111111;
+  --ci-cobalt: #2B75E8;
+  --ci-cobalt-light: #8CB9F0;
+  --ci-cobalt-deep: #1D58C4;
+  --ci-cobalt-tint: #E6EFFC;
+  --ci-surface: #FAF9F6;
+  --ci-surface-warm: #F6F4EF;
+  --ci-muted: #555566;
+  --ci-muted-soft: #66667A;
+  --ci-rule: #DCD8CF;
+  --ci-hairline: #E9E6DF;
+  --ci-focus: #2B75E8;
+  --ci-font-sans: 'Outfit Variable', 'Outfit', system-ui, sans-serif;
+
+  /* App tokens */
+  --app-radius: 24px;
+  --app-radius-sm: 16px;
+  --app-border: #E4E1DA;
+  --app-border-strong: #D9D5CC;
+  --app-surface-hover: #F6F4EF;
+  --app-sidebar: #FAF9F6;
+  --app-text-2: #3A3A48;
+
+  /* Clay: outer drop, outer highlight, inner highlight, inner shade */
+  --sp-grad: linear-gradient(135deg, #2B75E8, #8CB9F0);
+  --sp-clay: 10px 10px 24px rgba(0, 0, 0, 0.10), -10px -10px 24px #FFFFFF, inset 4px 4px 12px #FFFFFF, inset -4px -4px 12px rgba(0, 0, 0, 0.05);
+  --sp-clay-sm: 6px 6px 14px rgba(0, 0, 0, 0.09), -6px -6px 14px #FFFFFF, inset 2px 2px 6px #FFFFFF, inset -2px -2px 6px rgba(0, 0, 0, 0.04);
+  --sp-carve: inset 4px 4px 9px rgba(0, 0, 0, 0.07), inset -4px -4px 9px #FFFFFF;
+  --sp-clay-blue: 5px 7px 16px rgba(43, 117, 232, 0.32), -4px -4px 10px rgba(255, 255, 255, 0.85), inset 2px 2px 6px rgba(255, 255, 255, 0.35), inset -2px -3px 6px rgba(10, 40, 120, 0.22);
+  --app-shadow-raised: var(--sp-clay);
+}
+
+html[data-preset='simple'] body { font-size: 15.5px; }
+html[data-preset='simple'] h1,
+html[data-preset='simple'] h2,
+html[data-preset='simple'] h3,
+html[data-preset='simple'] h4 { font-weight: 700; letter-spacing: -0.025em; }
+html[data-preset='simple'] .page-header h1 { font-size: 28px; letter-spacing: -0.035em; }
+
+/* Surfaces: puffy clay instead of hairline borders */
+html[data-preset='simple'] .card,
+html[data-preset='simple'] .glass-panel { border: 0; box-shadow: var(--sp-clay); }
+html[data-preset='simple'] .card .card,
+html[data-preset='simple'] .start-option,
+html[data-preset='simple'] .continue-item,
+html[data-preset='simple'] .upgrade-card,
+html[data-preset='simple'] .notice,
+html[data-preset='simple'] .chart-tooltip,
+html[data-preset='simple'] .chat-msg--assistant,
+html[data-preset='simple'] .plan-step--suggested,
+html[data-preset='simple'] .goal-option { border: 0; box-shadow: var(--sp-clay-sm); }
+html[data-preset='simple'] .notice { border-radius: 18px; }
+html[data-preset='simple'] .upgrade-card { border-radius: 20px; }
+html[data-preset='simple'] .upgrade-card--active,
+html[data-preset='simple'] .platform-card.is-selected,
+html[data-preset='simple'] .goal-option.is-on { box-shadow: var(--sp-clay-sm), inset 0 0 0 2px var(--ci-cobalt-light); }
+html[data-preset='simple'] .chart-tooltip { border-radius: 14px; }
+html[data-preset='simple'] .terminal { border-radius: 20px; box-shadow: inset 3px 3px 10px rgba(0, 0, 0, 0.5); }
+html[data-preset='simple'] .skeleton { background: linear-gradient(90deg, #E9E6DF 0%, #F6F4EF 50%, #E9E6DF 100%); background-size: 200% 100%; border-radius: 18px; }
+
+/* Buttons: soft and tactile, a little taller for thumbs */
+html[data-preset='simple'] .btn { min-height: 44px; padding: 0 18px; border-radius: 16px; }
+html[data-preset='simple'] .btn-sm { min-height: 36px; padding: 0 14px; border-radius: 12px; }
+html[data-preset='simple'] .btn-icon { width: 44px; min-height: 44px; padding: 0; }
+html[data-preset='simple'] .btn-primary { background: var(--sp-grad); box-shadow: var(--sp-clay-blue); }
+html[data-preset='simple'] .btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 7px 10px 20px rgba(43, 117, 232, 0.36), -5px -5px 12px rgba(255, 255, 255, 0.9), inset 2px 2px 6px rgba(255, 255, 255, 0.35), inset -2px -3px 6px rgba(10, 40, 120, 0.22); }
+html[data-preset='simple'] .btn-primary:active:not(:disabled) { transform: translateY(1px); box-shadow: inset 4px 4px 10px rgba(10, 40, 120, 0.35); }
+html[data-preset='simple'] .btn-secondary,
+html[data-preset='simple'] .btn-danger { border-color: transparent; box-shadow: var(--sp-clay-sm); }
+html[data-preset='simple'] .btn-secondary:hover:not(:disabled) { background: var(--ci-surface); border-color: transparent; transform: translateY(-1px); }
+html[data-preset='simple'] .btn-secondary:active:not(:disabled),
+html[data-preset='simple'] .btn-danger:active:not(:disabled) { transform: none; box-shadow: var(--sp-carve); }
+html[data-preset='simple'] .btn-ghost:hover:not(:disabled) { background: transparent; box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.05), inset -2px -2px 5px rgba(255, 255, 255, 0.9); }
+html[data-preset='simple'] .chat-starters .btn { border: 0; box-shadow: var(--sp-clay-sm); }
+
+/* Inputs: carved into the surface */
+html[data-preset='simple'] .input-field { min-height: 44px; background: var(--ci-surface); border-color: transparent; border-radius: 14px; box-shadow: var(--sp-carve); }
+html[data-preset='simple'] .input-field.input-sm { min-height: 38px; border-radius: 12px; }
+html[data-preset='simple'] .input-field:hover { border-color: transparent; }
+html[data-preset='simple'] .input-field:focus { border-color: transparent; box-shadow: var(--sp-carve), 0 0 0 3px rgba(43, 117, 232, 0.25); }
+html[data-preset='simple'] .input-field[aria-invalid='true'] { border-color: transparent; box-shadow: var(--sp-carve), 0 0 0 2px var(--app-danger); }
+html[data-preset='simple'] .context-preview,
+html[data-preset='simple'] .key-row code,
+html[data-preset='simple'] .code-block,
+html[data-preset='simple'] .email-preview iframe { border: 0; background: var(--ci-surface); box-shadow: var(--sp-carve); }
+html[data-preset='simple'] .context-preview { border-radius: 16px; }
+
+/* Segmented controls: a carved track with a clay-blue knob */
+html[data-preset='simple'] .segmented { padding: 4px; border-radius: 16px; background: var(--ci-surface); box-shadow: var(--sp-carve); }
+html[data-preset='simple'] .segmented button { min-height: 36px; border-radius: 12px; }
+html[data-preset='simple'] .segmented button[aria-pressed='true'] { background: var(--sp-grad); color: #FFFFFF; box-shadow: var(--sp-clay-blue); }
+
+/* Badges and small accents */
+html[data-preset='simple'] .badge { background: #E9E6DF; }
+html[data-preset='simple'] .badge--cobalt { background: var(--ci-cobalt-tint); color: var(--ci-cobalt-deep); }
+html[data-preset='simple'] .chat-msg { border-radius: 18px; }
+html[data-preset='simple'] .chat-msg--user { background: var(--sp-grad); box-shadow: var(--sp-clay-blue); }
+html[data-preset='simple'] .toast { border-radius: 18px; }
+html[data-preset='simple'] .step-dots li.is-current { background: var(--sp-grad); }
+
+/* App shell: clay sidebar, carved active page */
+html[data-preset='simple'] .app-sidebar { border-right: 0; box-shadow: 4px 0 16px rgba(0, 0, 0, 0.05); }
+html[data-preset='simple'] .app-nav a { min-height: 42px; border-radius: 14px; }
+html[data-preset='simple'] .app-nav a:hover { background: transparent; box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.04), inset -2px -2px 5px rgba(255, 255, 255, 0.8); }
+html[data-preset='simple'] .app-nav a[aria-current='page'] { background: var(--ci-surface); color: var(--ci-cobalt); box-shadow: var(--sp-carve); }
+html[data-preset='simple'] .app-nav-divider,
+html[data-preset='simple'] .app-sidebar-footer { border-color: var(--ci-hairline); }
+html[data-preset='simple'] .app-brand { font-weight: 800; }
+
+@media (max-width: 900px) {
+  html[data-preset='simple'] .app-topbar { height: 60px; background: rgba(242, 240, 234, 0.94); border-bottom: 0; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06); }
+  html[data-preset='simple'] .drawer-close { box-shadow: var(--sp-clay-sm); }
+  html[data-preset='simple'] .app-sidebar.is-open { border-radius: 0 28px 28px 0; }
+}
+
+@media (max-width: 640px) {
+  html[data-preset='simple'] .app-main { padding: 18px 16px 80px; }
+  html[data-preset='simple'] .card { padding: 18px; }
+  html[data-preset='simple'] .stat-value { font-size: 23px; }
+}
