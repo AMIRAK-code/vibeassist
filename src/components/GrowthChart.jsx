@@ -2,9 +2,8 @@ import React from 'react';
 import { Area, Bar, BarChart, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { formatDay } from '../lib/metrics';
 import { formatCompactCount, formatCompactMoney, formatCount, formatMoney } from '../lib/format';
-import { CHART_CHROME, SERIES_COLORS } from '../lib/chartColors';
+import { useChartPalette } from '../context/preset';
 
-const tick = { fill: CHART_CHROME.axis, fontSize: 12 };
 const Y_WIDTH = 60; // same on both panels so the days line up
 
 // Hover readout: the value leads, the series name follows, keyed with a short stroke
@@ -41,6 +40,8 @@ export function ChartLegend({ items }) {
 // the other. Two aligned panels instead of two scales on one plot, so the lines never appear
 // to meet or cross only because of where an axis happens to start.
 export default function GrowthChart({ data, currency }) {
+  const { series: SERIES_COLORS, chrome: CHART_CHROME, cursor } = useChartPalette();
+  const tick = { fill: CHART_CHROME.axis, fontSize: 12 };
   const money = (v) => formatMoney(v, currency);
   const moneyRows = [
     { key: 'revenue', label: 'Gross revenue', color: SERIES_COLORS.revenue, format: money, mark: 'area' },
@@ -86,7 +87,7 @@ export default function GrowthChart({ data, currency }) {
               <CartesianGrid vertical={false} stroke={CHART_CHROME.grid} />
               <XAxis dataKey="label" tick={tick} tickLine={false} axisLine={{ stroke: CHART_CHROME.baseline }} minTickGap={18} />
               <YAxis tick={tick} tickLine={false} axisLine={false} tickFormatter={formatCompactCount} width={Y_WIDTH} allowDecimals={false} />
-              <Tooltip content={<ChartReadout rows={downloadRows} />} cursor={{ fill: 'rgba(36,72,255,0.06)' }} isAnimationActive={false} />
+              <Tooltip content={<ChartReadout rows={downloadRows} />} cursor={{ fill: cursor }} isAnimationActive={false} />
               {/* A thin surface-coloured edge keeps the two stacked parts visibly apart */}
               <Bar dataKey="organicDownloads" stackId="d" fill={SERIES_COLORS.organicDownloads} stroke={CHART_CHROME.surface} strokeWidth={1} maxBarSize={24} />
               <Bar dataKey="paidDownloads" stackId="d" fill={SERIES_COLORS.paidDownloads} stroke={CHART_CHROME.surface} strokeWidth={1} maxBarSize={24} radius={[4, 4, 0, 0]} />

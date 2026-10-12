@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useToast } from '../components/ui/toast-context';
 import { friendlyError, supabase } from '../lib/supabase';
 import { usePersistentState } from '../lib/usePersistentState';
-import { engine, isActive } from '../lib/engine';
+import { aiLabel, effectiveAiChoice, engine, isActive } from '../lib/engine';
 import PageHeader from '../components/ui/PageHeader';
 import Notice from '../components/ui/Notice';
 import GitHubConnect from '../components/engine/GitHubConnect';
@@ -13,6 +13,7 @@ import FindingsList from '../components/engine/FindingsList';
 import RulesEditor from '../components/engine/RulesEditor';
 import { Backtest, Snapshots } from '../components/engine/BacktestAndSnapshots';
 import Gateway from '../components/engine/Gateway';
+import EngineAi from '../components/engine/EngineAi';
 import ActionSetup from '../components/engine/ActionSetup';
 
 // The Anti-Fragile Vibe Orchestrator: guards for code written with AI tools. Pre-flight, Red
@@ -31,6 +32,7 @@ export default function Orchestrator() {
   const [rules, setRules] = useState([]);
   const [snapshots, setSnapshots] = useState([]);
   const [gateway, setGateway] = useState({ providerKeys: [], routes: [], gatewayKeys: [], usage: [], engineKey: null });
+  const [aiSettings, setAiSettings] = useState(null);
   const [busy, setBusy] = useState('');
   const [loadError, setLoadError] = useState('');
   const findingsRef = useRef(null);
@@ -39,13 +41,14 @@ export default function Orchestrator() {
   const selectedRun = runs.find((r) => r.id === runId) ?? runs[0] ?? null;
 
   const loadAccount = useCallback(async (focusRepo) => {
-    const [integration, repoRows, keys, routes, apiKeys, usage] = await Promise.all([
+    const [integration, repoRows, keys, routes, apiKeys, usage, ai] = await Promise.all([
       supabase.from('integrations').select('status, account_label, last_error, expires_at').eq('provider', 'github').maybeSingle(),
       supabase.from('engine_repos').select('*').order('created_at'),
       supabase.from('gateway_provider_keys').select('*').order('created_at'),
       supabase.from('gateway_routes').select('*').order('alias'),
       supabase.from('api_keys').select('id, key_prefix, scope, label, created_at, last_used_at').in('scope', ['engine', 'gateway']).is('revoked_at', null).order('created_at'),
       supabase.from('gateway_usage').select('status, fallback_used, input_tokens, output_tokens').gte('created_at', new Date(Date.now() - 7 * 864e5).toISOString()).limit(5000),
+      supabase.from('engine_ai_settings').select('*').maybeSingle(),
     ]);
     if (repoRows.error) {
       setLoadError(friendlyError(repoRows.error, 'Could not load the engine.'));
@@ -63,6 +66,7 @@ export default function Orchestrator() {
       engineKey: (apiKeys.data ?? []).find((k) => k.scope === 'engine') ?? null,
       usage: usage.data ?? [],
     });
+    setAiSettings(ai.data ?? null);
   }, [setRepoId]);
 
   const loadRepo = useCallback(async () => {
@@ -126,7 +130,7 @@ export default function Orchestrator() {
   };
 
   const jump = (target) => {
-    if (target === 'action-setup' || target === 'gateway') {
+    if (target === 'action-setup' || target === 'gateway' || target === 'engine-ai') {
       document.getElementById(target)?.scrollIntoView({ block: 'start', behavior: 'smooth' });
       return;
     }
@@ -164,6 +168,7 @@ export default function Orchestrator() {
             runs={runs}
             gatewayRoutes={gateway.routes.length}
             hasRules={rules.some((r) => r.enabled)}
+            aiLabel={aiLabel(aiSettings, gateway.providerKeys)}
             onStart={start}
             onJump={jump}
             busy={busy}
@@ -179,6 +184,13 @@ export default function Orchestrator() {
         </>
       )}
 
+      <EngineAi
+        key={Object.values(effectiveAiChoice(aiSettings, gateway.providerKeys)).join('|') + (aiSettings ? '' : '|unsaved')}
+        providerKeys={gateway.providerKeys}
+        settings={aiSettings}
+        onChanged={() => loadAccount()}
+        onJump={jump}
+      />
       <Gateway {...gateway} onChanged={() => loadAccount()} />
     </>
   );

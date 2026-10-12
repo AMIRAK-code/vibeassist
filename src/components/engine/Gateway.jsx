@@ -134,7 +134,7 @@ export default function Gateway({ providerKeys, routes, gatewayKeys, usage, onCh
       <div className="grid-2">
         <div className="card">
           <h3 className="card-title">Provider keys</h3>
-          {providerKeys.length === 0 && <p className="muted" style={{ marginTop: 6 }}>No keys yet. An Anthropic key here is also used for your engine reviews (up to 50 a day).</p>}
+          {providerKeys.length === 0 && <p className="muted" style={{ marginTop: 6 }}>No keys yet. Any key here can also run your engine checks (up to 50 a day): choose it under Engine AI.</p>}
           <ul className="rule-list">
             {providerKeys.map((k) => (
               <li key={k.id}>

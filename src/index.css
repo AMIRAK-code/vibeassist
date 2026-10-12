@@ -609,6 +609,30 @@ a.start-option:hover { border-color: var(--ci-cobalt); }
 .inline-icon { vertical-align: -2px; }
 .goal-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 16px; }
 
+/* Appearance: Simple / Advanced preset picker (fixed colours, so each preview shows its own look) */
+.preset-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
+.preset-option { position: relative; display: flex; flex-direction: column; gap: 10px; padding: 12px; border: 1px solid var(--app-border); border-radius: var(--app-radius); background: var(--ci-surface); cursor: pointer; }
+.preset-option.is-on { border-color: var(--ci-cobalt); box-shadow: 0 0 0 1px var(--ci-cobalt) inset; }
+.preset-option input { position: absolute; top: 12px; right: 12px; width: 18px; height: 18px; accent-color: var(--ci-cobalt); }
+.preset-option:has(input:focus-visible) { outline: 3px solid var(--ci-focus); outline-offset: 2px; }
+.preset-option-text { display: flex; flex-direction: column; gap: 2px; padding-right: 22px; }
+.preset-preview { position: relative; display: block; height: 76px; border-radius: 10px; overflow: hidden; }
+.preset-preview i, .preset-preview b { position: absolute; display: block; }
+.preset-preview--advanced { background: #F5F1E8; border: 1px solid #E2DCD0; }
+.preset-preview--advanced i { left: 12px; top: 12px; right: 40%; bottom: 12px; background: #FFFDFA; border: 1px solid #E2DCD0; border-radius: 6px; }
+.preset-preview--advanced b { right: 12px; bottom: 14px; width: 30%; height: 18px; border-radius: 5px; background: #2448FF; }
+.preset-preview--simple { background: #F2F0EA; }
+.preset-preview--simple i { left: 12px; top: 12px; right: 40%; bottom: 12px; border-radius: 14px; background: #FAF9F6; box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.10), -4px -4px 10px #FFFFFF; }
+.preset-preview--simple b { right: 12px; bottom: 14px; width: 30%; height: 20px; border-radius: 10px; background: linear-gradient(135deg, #2B75E8, #8CB9F0); box-shadow: 3px 4px 8px rgba(43, 117, 232, 0.35); }
+.preset-preview--auto { background: linear-gradient(115deg, #F2F0EA 0 50%, #F5F1E8 50% 100%); }
+.preset-preview--auto i { left: 14px; top: 10px; width: 30px; bottom: 10px; border-radius: 8px; background: #FAF9F6; box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.12), -3px -3px 8px #FFFFFF; }
+.preset-preview--auto b { right: 12px; top: 18px; width: 52%; bottom: 18px; border-radius: 5px; background: #FFFDFA; border: 1px solid #E2DCD0; box-shadow: inset 0 -10px 0 #2448FF; }
+@media (max-width: 760px) {
+  .preset-options { grid-template-columns: minmax(0, 1fr); }
+  .preset-option { flex-direction: row; align-items: center; }
+  .preset-preview { width: 96px; height: 60px; flex: none; }
+}
+
 /* Auth extras and plans */
 .password-row { display: flex; gap: 6px; align-items: center; }
 .password-row .input-field { flex: 1; }

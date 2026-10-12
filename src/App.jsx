@@ -3,6 +3,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate, Link, NavLink, Outlet
 import { BadgeCheck, Cpu, LayoutDashboard, ShieldCheck, ListChecks, Lock, Megaphone, Newspaper, Settings as SettingsIcon, ShieldAlert, TrendingUp, LogOut, Menu, X } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { AuthProvider } from './context/AuthContext';
+import { PresetProvider } from './context/PresetContext';
+import { useAppPreset } from './context/preset';
 import { useAuth } from './context/auth';
 import { ToastProvider } from './components/ui/Toast';
 import FullPageSpinner from './components/FullPageSpinner';
@@ -142,6 +144,8 @@ function Sidebar({ open, onClose }) {
 }
 
 function MainLayout() {
+  // Simple or Advanced look for the signed-in app; the landing page is outside this layout
+  useAppPreset();
   const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
   const toggle = useRef(null);
@@ -256,54 +260,56 @@ function App() {
 
   return (
     <AuthProvider>
-      <ToastProvider>
-        <Router>
-          <AuthLinkErrorRedirect />
-          <Routes>
-            <Route path="/" element={<Landing />} />
-            <Route path="/onboarding" element={<Onboarding />} />
-            <Route path="/signin" element={<SignIn />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/premium" element={<PaywallRoute />} />
-            <Route path="/terms" element={<Suspense fallback={<FullPageSpinner />}><Terms /></Suspense>} />
-            <Route path="/privacy" element={<Suspense fallback={<FullPageSpinner />}><Privacy /></Suspense>} />
-            <Route path="/refunds" element={<Suspense fallback={<FullPageSpinner />}><Refunds /></Suspense>} />
-            <Route path="/newsletter/confirm" element={<Suspense fallback={<FullPageSpinner />}><NewsletterConfirm /></Suspense>} />
-            <Route path="/newsletter/unsubscribe" element={<Suspense fallback={<FullPageSpinner />}><NewsletterUnsubscribe /></Suspense>} />
+      <PresetProvider>
+        <ToastProvider>
+          <Router>
+            <AuthLinkErrorRedirect />
+            <Routes>
+              <Route path="/" element={<Landing />} />
+              <Route path="/onboarding" element={<Onboarding />} />
+              <Route path="/signin" element={<SignIn />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/premium" element={<PaywallRoute />} />
+              <Route path="/terms" element={<Suspense fallback={<FullPageSpinner />}><Terms /></Suspense>} />
+              <Route path="/privacy" element={<Suspense fallback={<FullPageSpinner />}><Privacy /></Suspense>} />
+              <Route path="/refunds" element={<Suspense fallback={<FullPageSpinner />}><Refunds /></Suspense>} />
+              <Route path="/newsletter/confirm" element={<Suspense fallback={<FullPageSpinner />}><NewsletterConfirm /></Suspense>} />
+              <Route path="/newsletter/unsubscribe" element={<Suspense fallback={<FullPageSpinner />}><NewsletterUnsubscribe /></Suspense>} />
 
-            <Route element={<AuthRoute />}>
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/publishing" element={<Publishing />} />
-              <Route path="/newsletter" element={<Newsletter />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/premium/welcome" element={<CheckoutReturn />} />
-              <Route element={<PremiumRoute feature="ai-analyzer" />}>
-                <Route path="/ai-analyzer" element={<AIAnalyzer />} />
+              <Route element={<AuthRoute />}>
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/publishing" element={<Publishing />} />
+                <Route path="/newsletter" element={<Newsletter />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="/premium/welcome" element={<CheckoutReturn />} />
+                <Route element={<PremiumRoute feature="ai-analyzer" />}>
+                  <Route path="/ai-analyzer" element={<AIAnalyzer />} />
+                </Route>
+                <Route element={<PremiumRoute feature="orchestrator" />}>
+                  <Route path="/orchestrator" element={<Orchestrator />} />
+                  <Route path="/orchestrator/api" element={<OrchestratorApi />} />
+                </Route>
+                <Route element={<PremiumRoute feature="plan" />}>
+                  <Route path="/plan" element={<Plan />} />
+                </Route>
+                <Route element={<PremiumRoute feature="ads" />}>
+                  <Route path="/ads" element={<CampaignOverview />} />
+                </Route>
+                <Route element={<PremiumRoute feature="integrations" />}>
+                  <Route path="/integrations" element={<Integrations />} />
+                </Route>
               </Route>
-              <Route element={<PremiumRoute feature="orchestrator" />}>
-                <Route path="/orchestrator" element={<Orchestrator />} />
-                <Route path="/orchestrator/api" element={<OrchestratorApi />} />
-              </Route>
-              <Route element={<PremiumRoute feature="plan" />}>
-                <Route path="/plan" element={<Plan />} />
-              </Route>
-              <Route element={<PremiumRoute feature="ads" />}>
-                <Route path="/ads" element={<CampaignOverview />} />
-              </Route>
-              <Route element={<PremiumRoute feature="integrations" />}>
-                <Route path="/integrations" element={<Integrations />} />
-              </Route>
-            </Route>
 
-            {/* Addresses from the Oct 1 layout keep working */}
-            <Route path="/campaigns" element={<Navigate to="/ads" replace />} />
-            <Route path="/data-sources" element={<Navigate to="/integrations" replace />} />
-            <Route path="/launch" element={<Navigate to="/publishing" replace />} />
-            <Route path="/news" element={<Navigate to="/newsletter" replace />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </Router>
-      </ToastProvider>
+              {/* Addresses from the Oct 1 layout keep working */}
+              <Route path="/campaigns" element={<Navigate to="/ads" replace />} />
+              <Route path="/data-sources" element={<Navigate to="/integrations" replace />} />
+              <Route path="/launch" element={<Navigate to="/publishing" replace />} />
+              <Route path="/news" element={<Navigate to="/newsletter" replace />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Router>
+        </ToastProvider>
+      </PresetProvider>
     </AuthProvider>
   );
 }

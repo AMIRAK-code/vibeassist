@@ -4,11 +4,11 @@ import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YA
 import { useToast } from '../ui/toast-context';
 import { friendlyError, supabase } from '../../lib/supabase';
 import { engine } from '../../lib/engine';
-import { CHART_CHROME, SERIES_COLORS } from '../../lib/chartColors';
+import { useChartPalette } from '../../context/preset';
 import Notice from '../ui/Notice';
 
 const EMPTY = { title: '', body: '', kind: 'ai', pattern: '', paths: '', severity: 'medium' };
-const KINDS = { ai: 'Written rule (checked by Claude)', forbid_pattern: 'Must never match a pattern', require_pattern: 'Every matching file must contain a pattern' };
+const KINDS = { ai: 'Written rule (checked by your Engine AI)', forbid_pattern: 'Must never match a pattern', require_pattern: 'Every matching file must contain a pattern' };
 
 function RuleForm({ initial, onSave, onCancel, saving }) {
   const [form, setForm] = useState(initial);
@@ -81,6 +81,7 @@ function RuleForm({ initial, onSave, onCancel, saving }) {
 // far the code has drifted from them over time
 export default function RulesEditor({ repo, rules, driftRuns, onChanged }) {
   const toast = useToast();
+  const { series: SERIES_COLORS, chrome: CHART_CHROME } = useChartPalette();
   const [editing, setEditing] = useState(null); // 'new' | rule id | null
   const [saving, setSaving] = useState(false);
   const [suggestions, setSuggestions] = useState(null);
@@ -157,7 +158,7 @@ export default function RulesEditor({ repo, rules, driftRuns, onChanged }) {
 
       {suggestions && (
         <div className="card" style={{ marginBottom: 12 }}>
-          <p className="field-help">Drafted by Claude from {suggestions[0]?.from?.join(', ') ?? 'your notes'}. Add the ones that are right.</p>
+          <p className="field-help">Drafted by your Engine AI from {suggestions[0]?.from?.join(', ') ?? 'your notes'}. Add the ones that are right.</p>
           {suggestions.length === 0 ? <p className="muted">No more suggestions.</p> : (
             <ul className="suggestion-list">
               {suggestions.map((r, i) => (
@@ -173,7 +174,7 @@ export default function RulesEditor({ repo, rules, driftRuns, onChanged }) {
       )}
 
       {rules.length === 0 && editing !== 'new' ? (
-        <div className="card empty-state"><p>No rules yet. Write down how this codebase should stay organised, or let Claude suggest rules from your CLAUDE.md, AGENTS.md or .cursorrules.</p></div>
+        <div className="card empty-state"><p>No rules yet. Write down how this codebase should stay organised, or let your Engine AI suggest rules from your CLAUDE.md, AGENTS.md or .cursorrules.</p></div>
       ) : (
         <ul className="card card--flush rule-list">
           {rules.map((rule) => (

@@ -6,7 +6,7 @@ const ICONS = { red_team: Swords, preflight: ScanSearch, drift: Route, mutation:
 
 // The seven module tiles. In-app modules run against the chosen branch or pull request; the
 // others show their last report and where to set them up.
-export default function ModuleTiles({ repo, runs, gatewayRoutes, hasRules, onStart, onJump, busy }) {
+export default function ModuleTiles({ repo, runs, gatewayRoutes, hasRules, aiLabel, onStart, onJump, busy }) {
   const [kind, setKind] = useState('branch');
   const [branch, setBranch] = useState(repo.default_branch);
   const [pulls, setPulls] = useState(null);
@@ -82,7 +82,7 @@ export default function ModuleTiles({ repo, runs, gatewayRoutes, hasRules, onSta
                 ) : (
                   <button type="button" className="btn btn-ghost btn-sm" onClick={() => onJump('gateway')}>{gatewayRoutes ? 'Manage' : 'Set up'}</button>
                 )}
-                {m.ai && <span className="field-help">Uses Claude</span>}
+                {m.ai && <button type="button" className="link-button field-help" onClick={() => onJump('engine-ai')} title="Change which AI the checks use">Uses {aiLabel}</button>}
               </div>
             </article>
           );

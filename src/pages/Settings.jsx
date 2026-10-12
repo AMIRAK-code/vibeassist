@@ -12,6 +12,39 @@ import { authMessage } from '../lib/authErrors';
 import PageHeader from '../components/ui/PageHeader';
 import Notice from '../components/ui/Notice';
 import NewsletterSettings from '../components/NewsletterSettings';
+import { usePreset } from '../context/preset';
+
+const PRESET_OPTIONS = [
+  { value: 'auto', label: 'Automatic', help: 'Simple on phones, Advanced on foldables, tablets and computers. Switches as the screen changes.' },
+  { value: 'simple', label: 'Simple', help: 'The soft clay look with bigger touch targets, on any screen.' },
+  { value: 'advanced', label: 'Advanced', help: 'The full studio design, on any screen.' },
+];
+
+// Simple or Advanced look for the app on this device. The homepage keeps its own design.
+function AppearanceSettings() {
+  const { choice, preset, small, setChoice } = usePreset();
+  return (
+    <section className="card section" id="appearance" aria-labelledby="appearance-title">
+      <h2 id="appearance-title" className="card-title">Appearance</h2>
+      <p className="card-subtitle">How the app looks on this device. The homepage keeps its own design.</p>
+      <div className="preset-options" role="radiogroup" aria-labelledby="appearance-title">
+        {PRESET_OPTIONS.map((o) => (
+          <label key={o.value} className={`preset-option${choice === o.value ? ' is-on' : ''}`}>
+            <input type="radio" name="ui-preset" value={o.value} checked={choice === o.value} onChange={() => setChoice(o.value)} />
+            <span className={`preset-preview preset-preview--${o.value}`} aria-hidden="true"><i /><b /></span>
+            <span className="preset-option-text">
+              <strong>{o.label}</strong>
+              <span className="field-help">{o.help}</span>
+            </span>
+          </label>
+        ))}
+      </div>
+      <p className="field-help" role="status" style={{ marginTop: 10 }}>
+        Showing {preset === 'simple' ? 'Simple' : 'Advanced'}{choice === 'auto' ? ` because this screen is ${small ? 'phone-sized' : 'wider than a phone'}` : ''}.
+      </p>
+    </section>
+  );
+}
 
 const FIELDS = ['name', 'experience', 'profit_expectancy', 'goals', 'currency'];
 const FIELD_NAMES = { name: 'name', experience: 'experience', profit_expectancy: 'monthly profit target', goals: 'goals', currency: 'currency' };
@@ -296,6 +329,8 @@ export default function Settings() {
           <p className="field-help" style={{ marginTop: 10 }}>Change plan, update your card, download invoices or cancel on Stripe's billing page.</p>
         )}
       </section>
+
+      <AppearanceSettings />
 
       <NewsletterSettings />
 

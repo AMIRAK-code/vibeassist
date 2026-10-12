@@ -9,8 +9,10 @@
 //   -> 202 { run_id }; the run continues in the background and logs to engine_run_events
 // POST { action: 'rules_suggest', repo_id }       -> { rules } drafted from CLAUDE.md, AGENTS.md, .cursorrules…
 // POST { action: 'gateway_key_add', provider, label, key } / { action: 'gateway_key_remove', id }
+// POST { action: 'ai_settings_save', provider_key_id | null, model } -> { settings }  (which AI the checks use)
+// POST { action: 'ai_test' }                     -> { ok, label, model }  (one tiny call with that choice)
 //
-// Secrets: ANTHROPIC_API_KEY (unless users bring their own), optional ENGINE_MODEL.
+// Secrets: ANTHROPIC_API_KEY (unless users bring their own key, from any gateway provider), optional ENGINE_MODEL.
 import { createClient } from 'npm:@supabase/supabase-js@2.117.2';
 import { corsHeaders, json, projectKey } from '../_shared/http.ts';
 import { compareRuns, outcomeOf, prepareFindings } from '../_shared/engine/findings.ts';
@@ -143,7 +145,7 @@ Deno.serve(async (req) => {
           try {
             const target = await resolveTarget(token, repo.full_name, { kind, ref });
             await admin.from('engine_runs').update({ commit_sha: target.sha, pr_number: target.pr }).eq('id', run.id);
-            await log('info', `${module === 'preflight' ? 'Pre-flight Scanner' : module === 'red_team' ? 'Red Team' : 'Context & Drift'} on ${repo.full_name} at ${kind === 'pr' ? `PR #${ref}` : ref} (${target.sha.slice(0, 7)})${ai?.ownKey ? ', using your Anthropic key' : ''}`);
+            await log('info', `${module === 'preflight' ? 'Pre-flight Scanner' : module === 'red_team' ? 'Red Team' : 'Context & Drift'} on ${repo.full_name} at ${kind === 'pr' ? `PR #${ref}` : ref} (${target.sha.slice(0, 7)})${ai?.ownKey ? `, using your ${ai.label} key (${ai.model})` : ''}`);
             const ctx: Ctx = { token, repo, sha: target.sha, pr: target.pr, prTitle: target.title, ref, log, admin, userId: user.id };
             const result = module === 'preflight' ? await runPreflight(ctx)
               : module === 'red_team' ? await runRedTeam(ctx, ai!)
@@ -181,7 +183,7 @@ Deno.serve(async (req) => {
             await log('ok', `Finished: ${rows.length} finding${rows.length === 1 ? '' : 's'}`);
           } catch (error) {
             const message = error instanceof GitHubError ? explainGitHubError(error)
-              : (error as Error)?.message === 'not_configured' ? 'No Anthropic key is set up for the engine yet.'
+              : (error as Error)?.message === 'not_configured' ? 'No AI key is set up for the engine yet. Choose one under Engine AI.'
                 : String((error as Error)?.message ?? error).slice(0, 300);
             console.error('Engine run failed', run.id, message);
             await log('error', message);
@@ -206,7 +208,7 @@ Deno.serve(async (req) => {
         const result = await structuredCall<{ rules: { title: string; body: string; paths: string[]; severity: string }[] }>(
           choice.ai, admin, user.id, [SUGGEST_RULES, block], 'Suggest the rules.', RULES_SCHEMA,
         );
-        if (!result.data) return json({ error: 'Claude couldn\'t suggest rules from these notes. Try writing a few yourself.' }, 502);
+        if (!result.data?.rules) return json({ error: `${choice.ai.label === 'VibeAssist' ? 'The AI' : choice.ai.label} couldn't suggest rules from these notes. Try writing a few yourself.` }, 502);
         return json({ rules: result.data.rules.slice(0, 8), from: notes });
       }
 
@@ -227,6 +229,39 @@ Deno.serve(async (req) => {
           throw secretError;
         }
         return json({ key: row });
+      }
+
+      case 'ai_settings_save': {
+        const keyId = body.provider_key_id ? String(body.provider_key_id) : null;
+        let model = typeof body.model === 'string' ? body.model.trim() : '';
+        if (keyId) {
+          const { data: row } = await admin.from('gateway_provider_keys').select('id, provider').eq('id', keyId).eq('user_id', user.id).maybeSingle();
+          if (!row) return json({ error: 'That key isn't in your Smart Token Gateway any more.' }, 404);
+          if (!model && row.provider !== 'anthropic') return json({ error: `Enter the ${PROVIDERS[row.provider as Provider].label} model the checks should use.` }, 400);
+        } else {
+          model = '';
+        }
+        if (model && !/^[A-Za-z0-9._:/-]{1,100}$/.test(model)) return json({ error: 'Model names use letters, numbers and . _ : / - only.' }, 400);
+        const { data, error } = await admin.from('engine_ai_settings').upsert({
+          user_id: user.id, provider_key_id: keyId, model: model || null, updated_at: new Date().toISOString(),
+        }).select().single();
+        if (error) throw error;
+        return json({ settings: data });
+      }
+
+      case 'ai_test': {
+        const choice = await engineAi(admin, user.id);
+        if ('error' in choice) return json({ error: choice.error }, choice.status);
+        try {
+          const result = await structuredCall<{ ok: boolean }>(
+            choice.ai, admin, user.id, ['You confirm that an API connection works.'], 'Reply with {"ok": true}.',
+            { type: 'object', properties: { ok: { type: 'boolean' } }, required: ['ok'], additionalProperties: false },
+          );
+          if (!result.data) return json({ error: `${choice.ai.label} answered, but not in the JSON the checks need. Try a newer or larger model.` }, 502);
+          return json({ ok: true, label: choice.ai.label, model: result.model, own_key: choice.ai.ownKey });
+        } catch (error) {
+          return json({ error: String((error as Error)?.message ?? error).slice(0, 300) }, 502);
+        }
       }
 
       case 'gateway_key_remove': {

@@ -77,14 +77,14 @@ Deno.serve(async (req) => {
   let summary = clip(body.summary, 2000) ?? '';
   let model: string | null = null;
 
-  // Vision Grounding: Claude looks at the screenshots the Action took
+  // Vision Grounding: the user's chosen AI (it must accept images) looks at the screenshots the Action took
   if (body.module === 'vision' && Array.isArray(body.images) && body.images.length) {
     const images = body.images.slice(0, MAX_IMAGES).filter((img: { data?: string }) => typeof img?.data === 'string' && img.data.length <= MAX_IMAGE_CHARS && /^[A-Za-z0-9+/=]+$/.test(img.data));
     const { count } = await admin.from('engine_runs').select('id', { count: 'exact', head: true })
       .eq('user_id', owner.user_id).eq('module', 'vision').gte('created_at', new Date(Date.now() - 864e5).toISOString());
     const choice = (count ?? 0) < VISION_RUNS_PER_DAY ? await engineAi(admin, owner.user_id) : { error: `Screenshot checks are limited to ${VISION_RUNS_PER_DAY} a day`, status: 429 };
     if ('error' in choice) {
-      log.push(`Claude didn't look at the screenshots: ${choice.error === 'not_configured' ? 'no Anthropic key is set up for the engine' : choice.error}`);
+      log.push(`The AI didn't look at the screenshots: ${choice.error === 'not_configured' ? 'no AI key is set up for the engine' : choice.error}`);
     } else if (images.length) {
       const content = images.flatMap((img: { url: string; viewport: number; data: string }) => [
         { type: 'text' as const, text: `Screenshot: ${String(img.url).slice(0, 200)} @ ${Number(img.viewport) || 0}px` },
@@ -95,12 +95,14 @@ Deno.serve(async (req) => {
           choice.ai, admin, owner.user_id, [VISION], [...content, { type: 'text' as const, text: 'Check these screenshots for layout problems.' }], VISION_SCHEMA,
         );
         model = result.model;
-        for (const f of result.data?.findings ?? []) {
-          findings.push({ module: 'vision', severity: f.severity, category: 'layout', title: f.title.slice(0, 200), file: f.file.slice(0, 500), evidence: f.evidence.slice(0, 600), fix: f.fix.slice(0, 2000), confidence: 'medium', verified: true });
+        const listed = result.data?.findings;
+        const seen = (Array.isArray(listed) ? listed : []).filter((f) => f && typeof f === 'object' && f.title);
+        for (const f of seen) {
+          findings.push({ module: 'vision', severity: ['high', 'medium', 'low'].includes(f.severity) ? f.severity : 'medium', category: 'layout', title: String(f.title).slice(0, 200), file: String(f.file ?? '').slice(0, 500), evidence: String(f.evidence ?? '').slice(0, 600), fix: String(f.fix ?? '').slice(0, 2000), confidence: 'medium', verified: true });
         }
-        log.push(`Claude checked ${images.length} screenshot${images.length === 1 ? '' : 's'}: ${result.data?.findings.length ?? 0} layout issue(s)`);
+        log.push(`${choice.ai.label === 'VibeAssist' ? 'The AI' : `${choice.ai.label} (${choice.ai.model})`} checked ${images.length} screenshot${images.length === 1 ? '' : 's'}: ${seen.length} layout issue(s)`);
       } catch (error) {
-        log.push(`Claude couldn't check the screenshots: ${String((error as Error)?.message ?? error).slice(0, 150)}`);
+        log.push(`The AI couldn't check the screenshots (it needs a model that accepts images): ${String((error as Error)?.message ?? error).slice(0, 150)}`);
       }
     }
     summary = summary || `${findings.length} issue${findings.length === 1 ? '' : 's'} on ${images.length} screenshot${images.length === 1 ? '' : 's'}.`;
