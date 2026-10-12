@@ -4,6 +4,7 @@
 // capped at 8 AI runs a day and sharing the 30-request daily pool with the advisor. Users who
 // never chose keep the earlier behaviour: their newest Anthropic gateway key, if they added one.
 // The shared key's model is ENGINE_MODEL, or the advisor's model when that isn't set.
+// Context Handoffs use the same choice of AI (resolveAi) with limits of their own.
 import { Anthropic, DAILY_LIMIT, MODEL, textOf } from './ai.ts';
 import { PROVIDERS, type Provider } from './engine/gatewayRouting.ts';
 import { jsonInstruction, parseJsonReply, providerProblem, responseFormats, toOpenAiContent, type UserContent } from './engine/aiFormats.ts';
@@ -36,8 +37,13 @@ async function chosenKey(admin: any, userId: string) {
   return { row: rows?.[0] ?? null, model: null };
 }
 
+type Choice = { ai: EngineAi } | { error: string; status: number };
+
+// The AI a user's requests run on, with no daily limits applied: what they chose under Engine
+// AI, else (if they never chose) their newest Anthropic gateway key, else VibeAssist's key.
+// Context Handoffs use this with their own limits; the engine adds its limits in engineAi.
 // deno-lint-ignore no-explicit-any
-export async function engineAi(admin: any, userId: string): Promise<{ ai: EngineAi } | { error: string; status: number }> {
+export async function resolveAi(admin: any, userId: string): Promise<Choice> {
   const sharedModel = Deno.env.get('ENGINE_MODEL') || MODEL;
   const choice = await chosenKey(admin, userId);
   let provider: Provider = 'anthropic';
@@ -59,7 +65,17 @@ export async function engineAi(admin: any, userId: string): Promise<{ ai: Engine
   const ownKey = Boolean(apiKey);
   if (!apiKey) apiKey = Deno.env.get('ANTHROPIC_API_KEY') ?? null;
   if (!apiKey) return { error: 'not_configured', status: 503 };
+  const anthropic = PROVIDERS[provider].format === 'anthropic' ? new Anthropic({ apiKey, timeout: 300_000, maxRetries: 1 }) : null;
+  return { ai: { provider, label, model, ownKey, keyId, apiKey, anthropic } };
+}
 
+// The engine's AI with its daily limits: 50 AI runs with the user's own key, 8 with VibeAssist's
+// (which also share the 30-request daily pool with the advisor)
+// deno-lint-ignore no-explicit-any
+export async function engineAi(admin: any, userId: string): Promise<Choice> {
+  const resolved = await resolveAi(admin, userId);
+  if ('error' in resolved) return resolved;
+  const { ownKey } = resolved.ai;
   const since = new Date(Date.now() - 864e5).toISOString();
   const { count: aiRuns } = await admin
     .from('engine_runs').select('id', { count: 'exact', head: true })
@@ -72,15 +88,15 @@ export async function engineAi(admin: any, userId: string): Promise<{ ai: Engine
     const { count } = await admin.from('ai_usage').select('id', { count: 'exact', head: true }).eq('user_id', userId).gte('created_at', since);
     if ((count ?? 0) >= DAILY_LIMIT) return { error: `You've used all ${DAILY_LIMIT} AI requests for the last 24 hours. Try again tomorrow.`, status: 429 };
   }
-  const anthropic = PROVIDERS[provider].format === 'anthropic' ? new Anthropic({ apiKey, timeout: 300_000, maxRetries: 1 }) : null;
-  return { ai: { provider, label, model, ownKey, keyId, apiKey, anthropic } };
+  return resolved;
 }
 
-// One structured call, answered as JSON matching `schema`, through whichever provider the user chose
+// One structured call, answered as JSON matching `schema`, through whichever provider the user
+// chose. `feature` labels the ai_usage row when VibeAssist's own key pays for it.
 // deno-lint-ignore no-explicit-any
-export async function structuredCall<T>(ai: EngineAi, admin: any, userId: string, system: string[], user: UserContent, schema: object): Promise<Result<T>> {
+export async function structuredCall<T>(ai: EngineAi, admin: any, userId: string, system: string[], user: UserContent, schema: object, { feature = 'engine' }: { feature?: 'engine' | 'handoff' } = {}): Promise<Result<T>> {
   try {
-    const result = ai.anthropic ? await anthropicCall<T>(ai, admin, userId, system, user, schema) : await openAiCall<T>(ai, system, user, schema);
+    const result = ai.anthropic ? await anthropicCall<T>(ai, admin, userId, system, user, schema, feature) : await openAiCall<T>(ai, system, user, schema);
     if (ai.keyId) await admin.from('gateway_provider_keys').update({ last_used_at: new Date().toISOString(), last_error: null }).eq('id', ai.keyId);
     return result;
   } catch (error) {
@@ -91,7 +107,7 @@ export async function structuredCall<T>(ai: EngineAi, admin: any, userId: string
 
 // Claude, through the SDK. Streams so a long review doesn't hit the request timeout.
 // deno-lint-ignore no-explicit-any
-async function anthropicCall<T>(ai: EngineAi, admin: any, userId: string, system: string[], user: UserContent, schema: object): Promise<Result<T>> {
+async function anthropicCall<T>(ai: EngineAi, admin: any, userId: string, system: string[], user: UserContent, schema: object, feature: string): Promise<Result<T>> {
   let message: Anthropic.Beta.BetaMessage;
   try {
     message = await ai.anthropic!.beta.messages
@@ -117,7 +133,7 @@ async function anthropicCall<T>(ai: EngineAi, admin: any, userId: string, system
     await admin.from('ai_usage').insert({
       user_id: userId,
       model: message.model,
-      feature: 'engine',
+      feature,
       input_tokens: u.input_tokens + (u.cache_read_input_tokens ?? 0) + (u.cache_creation_input_tokens ?? 0),
       output_tokens: u.output_tokens,
     });
