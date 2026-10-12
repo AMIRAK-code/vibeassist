@@ -239,7 +239,10 @@ export default function LegalGenerator() {
     const found = validateInputs(inputs);
     setErrors(found);
     if (Object.keys(found).length) {
-      formRef.current?.querySelector('[aria-invalid="true"]')?.focus();
+      // After the error messages render, move to the first field that needs fixing
+      setTimeout(() => {
+        formRef.current?.querySelector('input[aria-invalid="true"], fieldset[aria-invalid="true"] input')?.focus();
+      }, 0);
       return;
     }
     const controller = new AbortController();
