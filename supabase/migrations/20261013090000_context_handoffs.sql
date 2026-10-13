@@ -23,17 +23,29 @@ create index handoffs_user_idx on public.handoffs (user_id, created_at desc);
 
 alter table public.handoffs enable row level security;
 
+-- Free accounts keep up to 3 handoffs; Premium up to 500. The handoffs function checks the same
+-- limits for the ones it writes. Counted here rather than in the insert policy: a policy that
+-- queries its own table fails with "infinite recursion detected in policy".
+create function public.can_add_handoff()
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select (select count(*) from public.handoffs where user_id = (select auth.uid()))
+    < (case when public.has_premium() then 500 else 3 end);
+$$;
+
+revoke execute on function public.can_add_handoff() from public, anon;
+grant execute on function public.can_add_handoff() to authenticated;
+
 create policy "Users read their own handoffs" on public.handoffs
   for select to authenticated using (user_id = (select auth.uid()));
--- Free accounts keep up to 3 handoffs; Premium up to 500. The handoffs function checks the same
--- limits for the ones it writes. This also lets Undo put back a handoff that was just deleted.
+-- This also lets Undo put back a handoff that was just deleted
 create policy "Users add their own handoffs within their plan" on public.handoffs
   for insert to authenticated
-  with check (
-    user_id = (select auth.uid())
-    and (select count(*) from public.handoffs h where h.user_id = (select auth.uid()))
-      < (case when (select public.has_premium()) then 500 else 3 end)
-  );
+  with check (user_id = (select auth.uid()) and (select public.can_add_handoff()));
 create policy "Users edit their own handoffs" on public.handoffs
   for update to authenticated
   using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
@@ -188,6 +200,7 @@ alter table public.ai_usage add constraint ai_usage_feature_check
 -- drop function public.create_handoff_link(uuid, integer);
 -- drop table public.handoff_links;
 -- drop table public.handoffs;
+-- drop function public.can_add_handoff();
 -- delete from public.ai_usage where feature = 'handoff';
 -- alter table public.ai_usage drop constraint ai_usage_feature_check;
 -- alter table public.ai_usage add constraint ai_usage_feature_check check (feature in ('advisor', 'engine'));
