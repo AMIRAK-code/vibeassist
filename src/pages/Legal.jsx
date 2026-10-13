@@ -106,6 +106,7 @@ export function Privacy() {
         <li>When you condense a chat into a handoff, its text (trimmed, with keys and passwords removed) goes to <strong>Anthropic</strong>, or, if you chose one of your own AI keys, to <strong>that provider</strong> under your own account and its terms. The chat isn't stored by us.</li>
         <li><strong>Apple</strong> and <strong>Google</strong>, only if you connect App Store Connect or Google Play: we read your sales and install reports from them with the key you gave us.</li>
         <li><strong>Cloudflare</strong> serves this website.</li>
+        <li>When you choose a password, your browser checks it against <strong>HaveIBeenPwned</strong>'s list of leaked passwords. Only the first five characters of a one-way hash of it are sent, never the password itself; the service sees your browser's IP address.</li>
         <li>Our <strong>email provider</strong> (Resend, EU region) sends sign-up and password emails and, if you subscribe, the Weekly Vibe. It doesn't track opens or clicks.</li>
         <li>The News & Newsletter page's topic tabs load stories straight from <strong>Hacker News (Algolia)</strong>, which sees your browser's IP address when you open them. The AI news and community threads are fetched by our server from Hacker News and Reddit, which learn nothing about you.</li>
       </ul>

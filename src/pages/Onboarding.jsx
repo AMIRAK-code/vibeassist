@@ -3,7 +3,7 @@ import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/auth';
-import { PASSWORD_HINT, validatePassword } from '../lib/password';
+import { leakedPasswordError, PASSWORD_HINT, validatePassword } from '../lib/password';
 import { authMessage, isValidEmail } from '../lib/authErrors';
 import { EXPERIENCE_OPTIONS, GOALS, PROFIT_OPTIONS } from '../lib/options';
 import BrandMark from '../components/landing/BrandMark';
@@ -67,6 +67,12 @@ export default function Onboarding() {
 
     setSigningUp(true);
     setSignupError('');
+    const leaked = await leakedPasswordError(form.password);
+    if (leaked) {
+      setSigningUp(false);
+      setErrors({ password: leaked });
+      return;
+    }
     // The sign-up trigger copies these answers into the new profile
     const { data, error } = await supabase.auth.signUp({
       email: form.email.trim(),

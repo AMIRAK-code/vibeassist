@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/auth';
-import { PASSWORD_HINT, validatePassword } from '../lib/password';
+import { leakedPasswordError, PASSWORD_HINT, validatePassword } from '../lib/password';
 import { authMessage } from '../lib/authErrors';
 import { useToast } from '../components/ui/toast-context';
 import BrandMark from '../components/landing/BrandMark';
@@ -47,6 +47,12 @@ export default function ResetPassword() {
       return;
     }
     setBusy(true);
+    const leaked = await leakedPasswordError(password);
+    if (leaked) {
+      setBusy(false);
+      setError(leaked);
+      return;
+    }
     const { error: updateError } = await supabase.auth.updateUser({ password });
     setBusy(false);
     if (updateError) {
