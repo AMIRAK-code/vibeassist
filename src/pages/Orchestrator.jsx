@@ -153,6 +153,7 @@ export default function Orchestrator() {
         title="Anti-Fragile Vibe Orchestrator"
         description="Premium service: an orchestration layer that keeps AI-written code from collapsing under its own architecture or leaking secrets."
       >
+        <Link to="/publishing?tab=security" className="btn btn-secondary">Browser Security Lab</Link>
         <Link to="/orchestrator/api" className="btn btn-ghost">View API Specs</Link>
       </PageHeader>
 

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowDown, ArrowUp, Download, Plus, Upload, X } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ArrowDown, ArrowUp, Calculator, Download, Plus, Sparkles, Upload, X } from 'lucide-react';
 import { useAuth } from '../context/auth';
 import { useToast } from '../components/ui/toast-context';
 import { friendlyError, supabase } from '../lib/supabase';
@@ -137,6 +138,8 @@ export default function CampaignOverview() {
   const [statusFilter, setStatusFilter] = usePersistentState('campaign-filter', 'all');
   const [sort, setSort] = usePersistentState('campaign-sort', { key: 'spend', dir: 'desc' });
   const [networkFilter, setNetworkFilter] = usePersistentState('campaign-network', 'all');
+  const [search, setSearch] = useState('');
+  const [feePct, setFeePct] = useState(15);
   const [importNetwork, setImportNetwork] = useState(null);
   const [targetDraft, setTargetDraft] = useState(null); // string while editing the target CAC
   const [targetSaving, setTargetSaving] = useState(false);
@@ -151,18 +154,24 @@ export default function CampaignOverview() {
   }, []);
 
   useEffect(() => {
-    load();
+    const t = setTimeout(() => { load(); }, 0);
+    return () => clearTimeout(t);
   }, [load]);
 
   const visible = useMemo(() => {
-    const list = (campaigns ?? []).filter((c) => (statusFilter === 'all' || c.status === statusFilter) && (networkFilter === 'all' || c.network === networkFilter));
+    const q = search.trim().toLowerCase();
+    const list = (campaigns ?? []).filter((c) => (
+      (statusFilter === 'all' || c.status === statusFilter)
+      && (networkFilter === 'all' || c.network === networkFilter)
+      && (!q || c.name.toLowerCase().includes(q))
+    ));
     const column = COLUMNS.find((c) => c.key === sort.key) ?? COLUMNS[1];
     return [...list].sort((a, b) => {
       const x = column.value(a), y = column.value(b);
       const order = x < y ? -1 : x > y ? 1 : 0;
       return sort.dir === 'asc' ? order : -order;
     });
-  }, [campaigns, statusFilter, networkFilter, sort]);
+  }, [campaigns, statusFilter, networkFilter, search, sort]);
 
   const all = campaigns ?? [];
   const totals = all.reduce((t, c) => ({ spend: t.spend + Number(c.spend), revenue: t.revenue + Number(c.revenue), installs: t.installs + c.installs }), { spend: 0, revenue: 0, installs: 0 });
@@ -329,6 +338,14 @@ export default function CampaignOverview() {
         title="Centralized Ad Manager"
         description="Meta, Google, YouTube, X, Apple Search Ads and TikTok in one place. Add campaigns by hand or import each network's campaign report."
       >
+        {all.length > 0 && (
+          <Link
+            to={`/ai-analyzer?prompt=${encodeURIComponent('Audit my active ad campaigns and tell me which to scale and which to pause.')}`}
+            className="btn btn-secondary"
+          >
+            <Sparkles aria-hidden="true" /> Audit with AI
+          </Link>
+        )}
         {all.length > 0 && <button type="button" className="btn btn-secondary" onClick={exportCsv}><Download aria-hidden="true" /> Export CSV</button>}
         <button type="button" className="btn btn-primary" onClick={() => { setFormError(''); setEditing('new'); }} disabled={editing !== null}>
           <Plus aria-hidden="true" /> Add campaign
@@ -398,6 +415,53 @@ export default function CampaignOverview() {
         </div>
       )}
 
+      {all.length > 0 && (
+        <div className="grid-2 section" style={{ alignItems: 'start' }}>
+          <section className="card" aria-labelledby="roas-bars-title">
+            <h2 id="roas-bars-title" className="card-title">Network ROAS Breakdown</h2>
+            <div className="stack-sm" style={{ marginTop: 12 }}>
+              {networks.filter((n) => n.spend > 0).length === 0 ? (
+                <p className="field-help">Add spend to campaigns to compare network efficiency.</p>
+              ) : (
+                networks.filter((n) => n.spend > 0).map((n) => {
+                  const barPct = Math.min(100, Math.round((n.roas ?? 0) / 3));
+                  return (
+                    <div key={n.key} className="roas-bar-row">
+                      <div className="flex-between" style={{ fontSize: 13.5 }}>
+                        <span><strong>{n.short}</strong> ({money(n.spend)})</span>
+                        <span className={n.roas >= 100 ? 'text-up' : 'text-down'}>{formatPercent(n.roas)} ROAS</span>
+                      </div>
+                      <div className="pacing-bar">
+                        <div className="pacing-bar-fill" style={{ width: `${barPct}%`, background: n.color }} />
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </section>
+
+          <section className="card" aria-labelledby="breakeven-title">
+            <h2 id="breakeven-title" className="card-title"><Calculator className="inline-icon" aria-hidden="true" /> Break-Even ROAS Calculator</h2>
+            <p className="card-subtitle">Factoring app store or payment fees, a campaign needs this ROAS just to break even.</p>
+            <div className="field" style={{ marginTop: 10 }}>
+              <label className="field-label" htmlFor="fee-pct-select">Store / Payment fee rate</label>
+              <select id="fee-pct-select" className="input-field input-sm" value={feePct} onChange={(e) => setFeePct(Number(e.target.value))}>
+                <option value={3}>3% (Stripe web payments)</option>
+                <option value={15}>15% (App Store / Google Play Small Business)</option>
+                <option value={30}>30% (Standard App Store / Play fee)</option>
+              </select>
+            </div>
+            <p style={{ fontSize: 16 }}>
+              Break-even ROAS: <strong>{Math.round(10000 / Math.max(1, 100 - feePct))}%</strong>
+              {roas !== null && (
+                <span className="field-help"> · Your blended ROAS is {formatPercent(roas)} ({roas >= 10000 / (100 - feePct) ? 'profitable after fees' : 'below break-even'}).</span>
+              )}
+            </p>
+          </section>
+        </div>
+      )}
+
       {campaigns !== null && (
         <section className="section" aria-labelledby="networks-title">
           <div className="section-header">
@@ -449,6 +513,16 @@ export default function CampaignOverview() {
           <div className="section-header">
             <h2 id="campaigns-title">{networkFilter === 'all' ? 'All campaigns' : `${AD_NETWORKS[networkFilter].short} campaigns`}</h2>
             <div className="page-actions">
+              <label className="visually-hidden" htmlFor="campaign-search">Search campaigns</label>
+              <input
+                id="campaign-search"
+                type="search"
+                className="input-field input-sm"
+                style={{ width: 180 }}
+                placeholder="Search campaign…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
               {networkFilter !== 'all' && (
                 <button type="button" className="btn btn-ghost btn-sm" onClick={() => setNetworkFilter('all')}>
                   <X aria-hidden="true" /> Show all networks

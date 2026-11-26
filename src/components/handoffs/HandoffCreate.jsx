@@ -7,10 +7,13 @@ import { usePersistentState } from '../../lib/usePersistentState';
 import { formatDateTime } from '../../lib/format';
 import { ACCEPT, parseTranscript, readTranscriptFile } from '../../lib/transcripts';
 import {
-  askAiPrompt, cleanTitle, describeRemoved, LIMITS, parseHandoffMarkdown, prepareChat, redactText, saveErrorMessage, SECTIONS, SOURCES,
+  askAiPrompt, cleanTitle, CONDENSE_INSTRUCTIONS, describeRemoved, fromAnswer, LIMITS,
+  parseHandoffMarkdown, prepareChat, redactText, renderTranscript, saveErrorMessage, SECTIONS, SOURCES,
 } from '../../lib/handoffs';
+import { completeWithUserAi, useImportedAi } from '../../lib/aiClient';
 import Notice from '../ui/Notice';
 import Elapsed from '../ui/Elapsed';
+import ModelSelectorPill from '../ModelSelectorPill';
 
 const FORMAT_LABELS = {
   chatgpt: 'ChatGPT export', deepseek: 'DeepSeek export', claude: 'Claude export', claude_code: 'Claude Code session',
@@ -118,9 +121,10 @@ export function AskYourAi({ disabled, hasPremium, onCreated }) {
   );
 }
 
-// Path 2: a chat file or pasted chat, condensed by the user's AI in the handoffs function
-export function FromChat({ disabled, ai, runsLeft, onCreated, onMaybeLater }) {
+// Path 2: a chat file or pasted chat, condensed by the user's imported AI or the handoffs function
+export function FromChat({ disabled, ai, runsLeft, hasPremium = false, onCreated, onMaybeLater }) {
   const toast = useToast();
+  const { active: importedAi } = useImportedAi('handoffs');
   const [loaded, setLoaded] = useState(null); // { name, format, source, conversations }
   const [reading, setReading] = useState(false);
   const [readError, setReadError] = useState('');
@@ -169,13 +173,58 @@ export function FromChat({ disabled, ai, runsLeft, onCreated, onMaybeLater }) {
   const chosen = conversations.find((c) => c.id === chosenId) ?? conversations[0] ?? null;
   const prepared = useMemo(() => (chosen ? prepareChat(chosen.messages) : null), [chosen]);
   const matches = (filter ? conversations.filter((c) => c.title.toLowerCase().includes(filter.toLowerCase())) : conversations).slice(0, 50);
-  const outOfRuns = runsLeft === 0;
+  const outOfRuns = !importedAi && runsLeft === 0;
 
   const condense = async () => {
     const controller = new AbortController();
     abort.current = controller;
     setPending({ since: Date.now() });
     setSendError(null);
+
+    if (importedAi) {
+      try {
+        const transcript = renderTranscript(prepared.messages);
+        const aiRes = await completeWithUserAi({
+          connection: importedAi,
+          system: [
+            CONDENSE_INSTRUCTIONS,
+            'Return ONLY valid JSON matching keys: title, goal, state, decisions, next, artifacts, preferences.',
+          ],
+          messages: [{ role: 'user', content: `Conversation title hint: ${chosen.title}\n\n<transcript>\n${transcript}\n</transcript>` }],
+          jsonMode: true,
+          maxTokens: 2400,
+          signal: controller.signal,
+        });
+        const formatted = fromAnswer(aiRes.data);
+        const cleanSections = formatted.sections.map((s) => ({ ...s, body: redactText(s.body).text.slice(0, LIMITS.body) }));
+        const { data: inserted, error: insertError } = await supabase
+          .from('handoffs')
+          .insert({
+            title: cleanTitle(redactText(formatted.title || chosen.title).text),
+            source,
+            method: 'ai',
+            sections: cleanSections,
+            conversation_date: chosen.createdAt ? new Date(chosen.createdAt).toISOString().slice(0, 10) : null,
+            message_count: chosen.messages.length,
+            model: `${importedAi.label} · ${aiRes.model}`,
+          })
+          .select()
+          .single();
+        setPending(null);
+        if (insertError) {
+          setSendError({ text: saveErrorMessage(insertError, hasPremium) ?? friendlyError(insertError, 'Could not save the handoff.') });
+          return;
+        }
+        setLoaded(null);
+        setPasted('');
+        onCreated(inserted);
+      } catch (err) {
+        setPending(null);
+        if (err?.name !== 'AbortError') setSendError({ text: err?.message || 'Could not condense the chat.' });
+      }
+      return;
+    }
+
     const { data, status, aborted } = await callFunction('handoffs', {
       action: 'condense', source, title: chosen.title, conversation_date: chosen.createdAt, messages: prepared.messages,
     }, { signal: controller.signal });
@@ -196,6 +245,9 @@ export function FromChat({ disabled, ai, runsLeft, onCreated, onMaybeLater }) {
 
   return (
     <div className="handoff-chat">
+      <div style={{ marginTop: 12, marginBottom: 12 }}>
+        <ModelSelectorPill feature="handoffs" hasPremium={hasPremium} />
+      </div>
       <div className="grid-2">
         <div className="field">
           <span className="field-label">A chat export</span>
@@ -273,11 +325,11 @@ export function FromChat({ disabled, ai, runsLeft, onCreated, onMaybeLater }) {
               <button type="button" className="btn btn-primary" onClick={condense} disabled={disabled || outOfRuns}>Make the handoff</button>
             )}
             <span className="field-help">
-              Written by {ai.label}{runsLeft !== null ? ` · ${outOfRuns ? 'none' : runsLeft} left today` : ''}
+              Written by {importedAi ? `${importedAi.label} (${importedAi.defaultModel})` : ai.label}{!importedAi && runsLeft !== null ? ` · ${outOfRuns ? 'none' : runsLeft} left today` : ''}
             </span>
           </div>
           <p className="field-help" style={{ marginTop: 8 }}>
-            Only this conversation, trimmed and with keys removed, is sent to {ai.ownKey ? 'your AI provider' : 'Anthropic'} when you press the button. VibeAssist keeps the handoff, never the chat.
+            Only this conversation, trimmed and with keys removed, is sent to {importedAi ? importedAi.label : ai.ownKey ? 'your AI provider' : 'Anthropic'} when you press the button. VibeAssist keeps the handoff, never the chat.
           </p>
         </div>
       )}
@@ -304,7 +356,7 @@ export default function HandoffCreate({ atLimit, hasPremium, ai, runsLeft, onCre
       )}
       {mode === 'self'
         ? <AskYourAi disabled={atLimit} hasPremium={hasPremium} onCreated={onCreated} />
-        : <FromChat disabled={atLimit} ai={ai} runsLeft={runsLeft} onCreated={onCreated} onMaybeLater={onMaybeLater} />}
+        : <FromChat disabled={atLimit} ai={ai} runsLeft={runsLeft} hasPremium={hasPremium} onCreated={onCreated} onMaybeLater={onMaybeLater} />}
     </section>
   );
 }

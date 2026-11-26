@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { bodyBlocks, countPlaceholders, EMPTY_INPUTS, fileName, toHtml, toMarkdown, toPlainText, validateInputs } from './legalDocs';
+import {
+  applyPlaceholderReplacements, auditLegalDocument, bodyBlocks, buildDeterministicDraft,
+  countPlaceholders, dbKindFor, DOC_KINDS, effectiveKind, EMPTY_INPUTS, extractPlaceholders,
+  fileName, toHtml, toMarkdown, toPlainText, validateInputs,
+} from './legalDocs';
 
 const doc = {
   kind: 'privacy',
@@ -45,5 +49,45 @@ describe('document rendering', () => {
   it('names files after the document and counts placeholders left to fill', () => {
     expect(fileName(doc, 'md')).toBe('privacy-policy-my-notes-app.md');
     expect(countPlaceholders(doc)).toBe(1);
+    expect(extractPlaceholders(doc)).toEqual(['[placeholder: support email]']);
+  });
+});
+
+describe('expanded legal studio & compliance auditor', () => {
+  it('maps extended doc kinds cleanly to database kinds', () => {
+    expect(DOC_KINDS.length).toBe(7);
+    expect(dbKindFor('cookies')).toBe('privacy');
+    expect(dbKindFor('dpa')).toBe('privacy');
+    expect(dbKindFor('ai_policy')).toBe('terms');
+    expect(effectiveKind({ kind: 'privacy', inputs: { docKind: 'dpa' } })).toBe('dpa');
+  });
+
+  it('builds deterministic drafts, fills placeholders, and audits clauses', () => {
+    const inputs = {
+      ...EMPTY_INPUTS,
+      appName: 'Pulse',
+      developerName: 'Acme Apps',
+      contactEmail: 'privacy@acme.test',
+      country: 'Germany',
+      platforms: ['ios', 'web'],
+      monetization: ['subscription'],
+      data: ['email', 'ai_prompts'],
+      services: ['stripe', 'gemini'],
+      jurisdictions: ['gdpr', 'eu_ai_act'],
+      effectiveDate: '2026-11-01',
+    };
+    const draft = buildDeterministicDraft('privacy', inputs);
+    expect(draft.title).toBe('Privacy Policy for Pulse');
+    expect(draft.sections.some((s) => s.body.includes('GDPR'))).toBe(true);
+
+    const updated = applyPlaceholderReplacements(draft.sections, {
+      '[retention period, e.g. 7 or 10 years for invoices]': '10 years',
+    });
+    const fullDoc = { kind: 'privacy', title: draft.title, inputs, sections: updated };
+    expect(countPlaceholders(fullDoc)).toBe(1); // [Website URL] left unfilled
+    const checks = auditLegalDocument(fullDoc, inputs);
+    expect(checks.find((c) => c.id === 'contact').ok).toBe(true);
+    expect(checks.find((c) => c.id === 'gdpr').ok).toBe(true);
+    expect(checks.find((c) => c.id === 'ai').ok).toBe(true);
   });
 });

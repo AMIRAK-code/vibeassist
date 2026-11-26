@@ -1,24 +1,31 @@
 import React, { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { ArrowRightLeft, BadgeCheck, Cpu, LayoutDashboard, ShieldCheck, ListChecks, Lock, Megaphone, Newspaper, Settings as SettingsIcon, ShieldAlert, TrendingUp, LogOut, Menu, X } from 'lucide-react';
+import {
+  ArrowRightLeft, BadgeCheck, Cpu, LayoutDashboard, ShieldCheck, ListChecks, Lock,
+  Megaphone, Newspaper, Plug, Search, Settings as SettingsIcon, ShieldAlert, Sparkles,
+  LogOut, Menu, X,
+} from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { AuthProvider } from './context/AuthContext';
 import { PresetProvider } from './context/PresetContext';
 import { useAppPreset } from './context/preset';
 import { useAuth } from './context/auth';
+import { useImportedAi } from './lib/aiClient';
+import { isDesktopApp } from './lib/desktopBridge';
 import { ToastProvider } from './components/ui/Toast';
 import FullPageSpinner from './components/FullPageSpinner';
 import BrandMark from './components/landing/BrandMark';
 import PremiumGate from './components/PremiumGate';
 import PageErrorBoundary from './components/PageErrorBoundary';
+import CommandPalette from './components/CommandPalette';
 import { initialAuthLinkError } from './lib/authErrors';
 import Landing from './pages/Landing';
 import SignIn from './pages/SignIn';
 import ResetPassword from './pages/ResetPassword';
 import Onboarding from './pages/Onboarding';
 
-// Signed-in pages load on demand, so the landing and sign-in pages don't download charts
 const Dashboard = lazy(() => import('./pages/Dashboard'));
+const ImportAI = lazy(() => import('./pages/ImportAI'));
 const PremiumPaywall = lazy(() => import('./pages/PremiumPaywall'));
 const Integrations = lazy(() => import('./pages/Integrations'));
 const Plan = lazy(() => import('./pages/Plan'));
@@ -40,25 +47,30 @@ const Refunds = lazy(() => import('./pages/Legal').then((m) => ({ default: m.Ref
 
 const FREE_PAGES = [
   { to: '/dashboard', label: 'Overall Income', icon: LayoutDashboard },
-  { to: '/publishing', label: 'Legal & Publishing', icon: ShieldAlert },
-  { to: '/newsletter', label: 'News & Newsletter', icon: Newspaper },
+  { to: '/ai-models', label: 'Import Your AI', icon: Sparkles },
+  { to: '/integrations', label: 'Connections & Data', icon: Plug },
+  { to: '/publishing', label: 'Legal & Security', icon: ShieldAlert },
   { to: '/handoffs', label: 'Context Handoffs', icon: ArrowRightLeft },
+  { to: '/newsletter', label: 'News & Newsletter', icon: Newspaper },
 ];
 const PREMIUM_PAGES = [
-  { to: '/integrations', label: 'Integrations', icon: TrendingUp, premium: true },
-  { to: '/ai-analyzer', label: 'AI Business Analyzer', icon: Cpu, premium: true },
-  { to: '/plan', label: 'Weekly Plan', icon: ListChecks, premium: true },
+  { to: '/ai-analyzer', label: 'AI Business Analyzer', icon: Cpu, premium: true, byokUnlock: true },
+  { to: '/plan', label: 'Weekly Plan', icon: ListChecks, premium: true, byokUnlock: true },
   { to: '/ads', label: 'Ad Manager', icon: Megaphone, premium: true },
   { to: '/orchestrator', label: 'Anti-Fragile Engine', icon: ShieldCheck, premium: true },
 ];
 const ALL_PAGES = [...FREE_PAGES, ...PREMIUM_PAGES, { to: '/settings', label: 'Settings' }];
 
-function NavItem({ item, hasPremium, onNavigate }) {
+function NavItem({ item, hasPremium, hasByok, aiBadge, onNavigate }) {
   const Icon = item.icon;
+  const locked = item.premium && !hasPremium && !(item.byokUnlock && hasByok);
   return (
     <NavLink to={item.to} onClick={onNavigate}>
       <Icon aria-hidden="true" /> {item.label}
-      {item.premium && !hasPremium && (
+      {item.to === '/ai-models' && aiBadge && (
+        <span className="badge badge--cobalt" style={{ marginLeft: 'auto', fontSize: 10.5, padding: '1px 6px' }}>{aiBadge}</span>
+      )}
+      {locked && (
         <>
           <Lock className="nav-lock" aria-hidden="true" />
           <span className="visually-hidden"> (Premium)</span>
@@ -68,18 +80,16 @@ function NavItem({ item, hasPremium, onNavigate }) {
   );
 }
 
-// Paying (or admin) members see what they have instead of an upgrade pitch
 function PremiumActiveCard({ onNavigate }) {
   return (
     <div className="upgrade-card upgrade-card--active">
       <p className="upgrade-card-title"><BadgeCheck aria-hidden="true" /> Premium Active</p>
       <p>All pro features unlocked.</p>
-      <Link to="/settings#plan" className="btn btn-secondary btn-sm w-full" onClick={onNavigate}>Plan & billing</Link>
+      <Link to="/settings#plan" className="btn btn-secondary btn-sm w-full" onClick={onNavigate}>Plan &amp; billing</Link>
     </div>
   );
 }
 
-// The way into Premium, always in view for anyone who doesn't pay for it yet
 function UpgradeCard({ subscription, onNavigate }) {
   const location = useLocation();
   const demoEnds = subscription?.current_period_end
@@ -88,7 +98,7 @@ function UpgradeCard({ subscription, onNavigate }) {
   return (
     <div className="upgrade-card">
       <p className="upgrade-card-title">{demoEnds ? `Your ${subscription.source === 'pass' ? 'pass' : 'demo Premium'} ends ${demoEnds}` : "You're on the Free plan"}</p>
-      <p>Unlock the AI tools, integrations and the Ad Manager.</p>
+      <p>Import your own AI key for free, or upgrade for automated Stripe &amp; Store sync.</p>
       <Link to={`/premium?from=${encodeURIComponent(location.pathname)}`} className="btn btn-primary btn-sm w-full" onClick={onNavigate}>
         {demoEnds ? 'Subscribe' : 'Upgrade to Premium'}
       </Link>
@@ -96,15 +106,15 @@ function UpgradeCard({ subscription, onNavigate }) {
   );
 }
 
-function Sidebar({ open, onClose }) {
+function Sidebar({ open, onClose, onOpenCommand }) {
   const { user, hasPremium, subscription, signOut } = useAuth();
+  const { models } = useImportedAi('default');
   const navigate = useNavigate();
   const demo = hasPremium && subscription?.source === 'demo';
   const pass = hasPremium && subscription?.source === 'pass';
   const planName = !hasPremium ? 'Free plan' : demo ? 'Demo Premium' : pass ? 'Premium pass' : subscription.source === 'admin' ? 'Admin Premium' : 'Premium';
   const firstLink = useRef(null);
 
-  // Mobile drawer: move focus in when it opens, close with Escape
   useEffect(() => {
     if (!open) return undefined;
     firstLink.current?.querySelector('a')?.focus();
@@ -122,23 +132,57 @@ function Sidebar({ open, onClose }) {
     <>
       {open && <button type="button" className="drawer-scrim" aria-label="Close menu" onClick={onClose} />}
       <aside className={`app-sidebar${open ? ' is-open' : ''}`} aria-label="Main navigation" id="app-navigation">
-        {/* The logo leads back to the homepage, as it always has */}
-        <Link to="/" className="app-brand" aria-label="VibeAssist home" onClick={onClose}><BrandMark /> VibeAssist</Link>
+        <div className="flex-between" style={{ gap: 8 }}>
+          <Link to="/" className="app-brand" aria-label="VibeAssist home" onClick={onClose}>
+            <BrandMark /> VibeAssist
+            {isDesktopApp() && <span className="badge badge--cobalt" style={{ fontSize: 10, padding: '1px 6px' }}>Rust</span>}
+          </Link>
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            title="Quick jump (Ctrl+K)"
+            aria-label="Quick navigation"
+            onClick={() => { onClose(); onOpenCommand(); }}
+          >
+            <Search aria-hidden="true" style={{ width: 15, height: 15 }} />
+            <span className="cmd-kbd">Ctrl+K</span>
+          </button>
+        </div>
+
         <nav className="app-nav" ref={firstLink}>
-          {FREE_PAGES.map((item) => <NavItem key={item.to} item={item} hasPremium={hasPremium} onNavigate={onClose} />)}
+          {FREE_PAGES.map((item) => (
+            <NavItem
+              key={item.to}
+              item={item}
+              hasPremium={hasPremium}
+              hasByok={models.length > 0}
+              aiBadge={models.length ? String(models.length) : ''}
+              onNavigate={onClose}
+            />
+          ))}
           <div className="app-nav-divider" role="separator" />
-          {PREMIUM_PAGES.map((item) => <NavItem key={item.to} item={item} hasPremium={hasPremium} onNavigate={onClose} />)}
+          {PREMIUM_PAGES.map((item) => (
+            <NavItem
+              key={item.to}
+              item={item}
+              hasPremium={hasPremium}
+              hasByok={models.length > 0}
+              onNavigate={onClose}
+            />
+          ))}
         </nav>
+
         {(!hasPremium || demo || pass)
           ? <UpgradeCard subscription={demo || pass ? subscription : null} onNavigate={onClose} />
           : <PremiumActiveCard onNavigate={onClose} />}
+
         <div className="app-sidebar-footer app-nav">
           <NavLink to="/settings" onClick={onClose}><SettingsIcon aria-hidden="true" /> Settings</NavLink>
           <button type="button" className="btn btn-ghost" style={{ justifyContent: 'flex-start', minHeight: 38, fontWeight: 500 }} onClick={handleSignOut}>
             <LogOut aria-hidden="true" /> Sign out
           </button>
-          <p className="app-account" title={user?.email}>
-            {user?.email} · {planName}
+          <p className="app-account" title={user?.user_metadata?.role === 'superuser' ? 'test · Superuser (Full Access)' : user?.email}>
+            {user?.user_metadata?.role === 'superuser' ? 'test · Superuser (Full Access)' : `${user?.email} · ${planName}`}
           </p>
         </div>
       </aside>
@@ -147,9 +191,9 @@ function Sidebar({ open, onClose }) {
 }
 
 function MainLayout() {
-  // Simple or Advanced look for the signed-in app; the landing page is outside this layout
   useAppPreset();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [cmdOpen, setCmdOpen] = useState(false);
   const location = useLocation();
   const toggle = useRef(null);
   const current = ALL_PAGES.find((p) => location.pathname.startsWith(p.to));
@@ -161,14 +205,34 @@ function MainLayout() {
     });
   }, []);
 
+  useEffect(() => {
+    const onKey = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setCmdOpen((v) => !v);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
   return (
     <div className="app-shell">
       <a href="#main" className="skip-link">Skip to content</a>
-      <Sidebar open={menuOpen} onClose={close} />
+      <Sidebar open={menuOpen} onClose={close} onOpenCommand={() => setCmdOpen(true)} />
       <div className="app-main-wrap">
         <div className="app-topbar">
           <Link to="/" className="app-brand" aria-label="VibeAssist home"><BrandMark /> VibeAssist</Link>
           {current && <span className="app-topbar-title">{current.label}</span>}
+          <button
+            type="button"
+            className="btn btn-ghost btn-icon"
+            style={{ marginLeft: 'auto' }}
+            aria-label="Quick navigation"
+            onClick={() => setCmdOpen(true)}
+          >
+            <Search aria-hidden="true" />
+          </button>
           <button
             type="button"
             ref={toggle}
@@ -196,12 +260,11 @@ function MainLayout() {
           <X aria-hidden="true" /><span className="visually-hidden">Close menu</span>
         </button>
       )}
+      <CommandPalette open={cmdOpen} onClose={() => setCmdOpen(false)} />
     </div>
   );
 }
 
-// Waits for the saved session, then sends signed-out visitors to sign in and brings them
-// back to the page they asked for. Redirects use `replace` so Back skips the guarded URL.
 function AuthRoute() {
   const { user, loading } = useAuth();
   const location = useLocation();
@@ -210,10 +273,11 @@ function AuthRoute() {
   return <MainLayout />;
 }
 
-// Premium screens explain themselves in place instead of bouncing to the paywall
 function PremiumRoute({ feature }) {
   const { hasPremium } = useAuth();
-  if (!hasPremium) return <PremiumGate feature={feature} />;
+  const { models } = useImportedAi('default');
+  const byokAllowed = (feature === 'ai-analyzer' || feature === 'plan') && models.length > 0;
+  if (!hasPremium && !byokAllowed) return <PremiumGate feature={feature} />;
   return <Outlet />;
 }
 
@@ -245,8 +309,6 @@ function SetupRequired() {
   );
 }
 
-// An emailed link that expired or was already used comes back with error details in the URL,
-// possibly on a public page. Send the visitor to sign in, which explains it and offers a new link.
 function AuthLinkErrorRedirect() {
   const navigate = useNavigate();
   const handled = useRef(false);
@@ -282,6 +344,8 @@ function App() {
 
               <Route element={<AuthRoute />}>
                 <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/ai-models" element={<ImportAI />} />
+                <Route path="/integrations" element={<Integrations />} />
                 <Route path="/publishing" element={<Publishing />} />
                 <Route path="/newsletter" element={<Newsletter />} />
                 <Route path="/handoffs" element={<Handoffs />} />
@@ -300,12 +364,8 @@ function App() {
                 <Route element={<PremiumRoute feature="ads" />}>
                   <Route path="/ads" element={<CampaignOverview />} />
                 </Route>
-                <Route element={<PremiumRoute feature="integrations" />}>
-                  <Route path="/integrations" element={<Integrations />} />
-                </Route>
               </Route>
 
-              {/* Addresses from the Oct 1 layout keep working */}
               <Route path="/campaigns" element={<Navigate to="/ads" replace />} />
               <Route path="/data-sources" element={<Navigate to="/integrations" replace />} />
               <Route path="/launch" element={<Navigate to="/publishing" replace />} />

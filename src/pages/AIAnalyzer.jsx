@@ -1,18 +1,23 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { MessageSquare, RotateCcw, Send } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { Copy, FileDown, MessageSquare, RotateCcw, Send, Sliders } from 'lucide-react';
 import { useAuth } from '../context/auth';
+import { useToast } from '../components/ui/toast-context';
 import { callFunction, friendlyError, supabase } from '../lib/supabase';
 import { fetchMetrics, formatDay, summarize } from '../lib/metrics';
 import { formatCount, formatMoney, formatMoneyExact } from '../lib/format';
 import { priceSignal, unitEconomics } from '../lib/unitEconomics';
 import { usePersistentState } from '../lib/usePersistentState';
+import { download } from '../lib/download';
+import { completeWithUserAi, useImportedAi } from '../lib/aiClient';
 import PageHeader from '../components/ui/PageHeader';
 import Notice from '../components/ui/Notice';
 import Elapsed from '../components/ui/Elapsed';
 import ContextPreview from '../components/ContextPreview';
+import ModelSelectorPill from '../components/ModelSelectorPill';
 
-const PERIOD = 90; // the analyzer always looks at the last 90 days
-const DAILY_LIMIT = 30; // shared with Weekly Plan
+const PERIOD = 90;
+const DAILY_LIMIT = 30;
 const STARTERS = [
   'How did my last 90 days go, and what should I focus on next?',
   'Which ad campaign should I pause first?',
@@ -29,19 +34,28 @@ function Figure({ label, value, hint }) {
 }
 
 export default function AIAnalyzer() {
-  const { profile } = useAuth();
+  const { profile, hasPremium } = useAuth();
+  const toast = useToast();
+  const [params, setParams] = useSearchParams();
+  const { active: importedAi } = useImportedAi('analyzer');
+
   const currency = profile?.currency ?? 'USD';
-  // Cents matter for per-user and per-install figures; whole units are enough for totals
   const money = (v) => (v === null ? null : Math.abs(v) < 100 ? formatMoneyExact(v, currency) : formatMoney(v, currency));
   const [rows, setRows] = useState(null);
-  const [campaignCount, setCampaignCount] = useState(0);
+  const [campaignRows, setCampaignRows] = useState([]);
   const [requestsLeft, setRequestsLeft] = useState(null);
   const [loadError, setLoadError] = useState('');
   const [churn, setChurn] = usePersistentState('analyzer-churn', '');
-  const [chat, setChat] = usePersistentState('analyzer-chat', []); // [{ role, content, at }]
+  const [chat, setChat] = usePersistentState('analyzer-chat', []);
   const [draft, setDraft] = usePersistentState('analyzer-draft', '');
-  const [pending, setPending] = useState(null); // { since } while Claude is answering
-  const [chatError, setChatError] = useState(null); // { text } or { notConfigured: true }
+  const [pending, setPending] = useState(null);
+  const [chatError, setChatError] = useState(null);
+
+  // What-If Simulator levers
+  const [simPricePct, setSimPricePct] = useState(0);
+  const [simConvPct, setSimConvPct] = useState(0);
+  const [simAdPct, setSimAdPct] = useState(0);
+
   const abort = useRef(null);
   const inputRef = useRef(null);
   const logEnd = useRef(null);
@@ -49,7 +63,7 @@ export default function AIAnalyzer() {
   const load = useCallback(async () => {
     const [metrics, campaigns, usage] = await Promise.all([
       fetchMetrics(PERIOD * 2),
-      supabase.from('ad_campaigns').select('id', { count: 'exact', head: true }),
+      supabase.from('ad_campaigns').select('name, network, status, spend, revenue, installs').limit(40),
       supabase.from('ai_usage').select('id', { count: 'exact', head: true }).gte('created_at', new Date(Date.now() - 864e5).toISOString()),
     ]);
     if (metrics.error) {
@@ -59,34 +73,73 @@ export default function AIAnalyzer() {
     }
     setLoadError('');
     setRows(metrics.data);
-    setCampaignCount(campaigns.count ?? 0);
+    setCampaignRows(campaigns.data ?? []);
     setRequestsLeft(Math.max(0, DAILY_LIMIT - (usage.count ?? 0)));
   }, []);
 
   useEffect(() => {
-    load();
-    return () => abort.current?.abort();
+    const t = setTimeout(() => { load(); }, 0);
+    return () => {
+      clearTimeout(t);
+      abort.current?.abort();
+    };
   }, [load]);
 
-  // Keep the newest message in view
+  useEffect(() => {
+    const initialPrompt = params.get('prompt');
+    if (!initialPrompt) return;
+    const t = setTimeout(() => {
+      setDraft(initialPrompt);
+      setParams({}, { replace: true });
+      inputRef.current?.focus();
+    }, 0);
+    return () => clearTimeout(t);
+  }, [params, setDraft, setParams]);
+
   useEffect(() => {
     logEnd.current?.scrollIntoView({ block: 'nearest' });
   }, [chat.length, pending]);
 
   const summary = useMemo(() => summarize(rows ?? [], PERIOD), [rows]);
-  const { current } = summary;
+  const { current, previous } = summary;
   const profit = current.revenue - current.fees - current.adSpend;
   const economics = useMemo(() => unitEconomics(summary.chartData, PERIOD, churn === '' ? null : churn), [summary, churn]);
   const pricing = useMemo(() => priceSignal(summary.chartData), [summary]);
   const latestPrice = [...pricing.weeks].reverse().find((w) => w.price !== null)?.price ?? null;
-  const outOfRequests = requestsLeft === 0;
+  const outOfRequests = !importedAi && requestsLeft === 0;
   const firstName = profile?.name?.split(' ')[0];
+
+  // What-If calculation
+  const sim = useMemo(() => {
+    const priceMult = 1 + simPricePct / 100;
+    const convMult = 1 + simConvPct / 100;
+    const adMult = 1 + simAdPct / 100;
+    const feeRate = current.revenue > 0 ? current.fees / current.revenue : 0.03;
+    const baseRev = current.revenue;
+    const simRevenue = baseRev * priceMult * convMult;
+    const simFees = simRevenue * feeRate;
+    const simAds = current.adSpend * adMult;
+    const simProfit = simRevenue - simFees - simAds;
+    return { simRevenue, simProfit, simAds, deltaProfit: simProfit - profit };
+  }, [current, profit, simPricePct, simConvPct, simAdPct]);
 
   const prefill = (text) => {
     setDraft(text);
     inputRef.current?.focus();
     inputRef.current?.scrollIntoView({ block: 'center' });
   };
+
+  const buildLocalContext = () => [
+    `Period: last ${PERIOD} days (${currency}).`,
+    `Current period: revenue ${current.revenue.toFixed(2)}, fees ${current.fees.toFixed(2)}, ad spend ${current.adSpend.toFixed(2)}, net profit ${profit.toFixed(2)}, downloads ${current.downloads}, purchases ${current.purchases}, days with data ${current.daysWithData}.`,
+    `Previous ${PERIOD} days: revenue ${previous.revenue.toFixed(2)}, ad spend ${previous.adSpend.toFixed(2)}, downloads ${previous.downloads}, purchases ${previous.purchases}.`,
+    `Unit economics: CAC ${economics.cac?.toFixed(2) ?? 'N/A'}, ARPU/mo ${economics.arpuMonthly?.toFixed(2) ?? 'N/A'}, LTV ${economics.ltv?.toFixed(2) ?? 'N/A'}, LTV:CAC ${economics.ltvToCac?.toFixed(2) ?? 'N/A'}.`,
+    `Profile goals: ${profile?.goals?.join('; ') || 'none set'}. Experience: ${profile?.experience ?? 'Beginner'}. Target: ${profile?.profit_expectancy ?? 'N/A'}.`,
+    `Includes sample data: ${summary.sources.includes('sample') ? 'yes' : 'no'}.`,
+    campaignRows.length
+      ? `Campaigns:\n${campaignRows.slice(0, 20).map((c) => `- ${c.name} (${c.network}, ${c.status}): spend ${c.spend}, rev ${c.revenue}, installs ${c.installs}`).join('\n')}`
+      : 'No ad campaigns tracked yet.',
+  ].join('\n');
 
   const send = async (text) => {
     const question = text.trim();
@@ -98,7 +151,32 @@ export default function AIAnalyzer() {
     setChat(history);
     setDraft('');
     setChatError(null);
-    setPending({ since: Date.now() });
+    setPending({ since: Date.now(), who: importedAi ? importedAi.label : 'Claude' });
+
+    if (importedAi) {
+      try {
+        const res = await completeWithUserAi({
+          connection: importedAi,
+          system: [
+            'You are a concise, data-grounded indie app business analyst inside VibeAssist.',
+            'Base every figure strictly on the user metrics below; state assumptions clearly if estimating. Keep answers under 220 words unless asked for detail.',
+            buildLocalContext(),
+          ],
+          messages: history.map(({ role, content }) => ({ role, content })),
+          maxTokens: 900,
+          signal: controller.signal,
+        });
+        setPending(null);
+        setChat([...history, { role: 'assistant', who: `${importedAi.label} (${res.model})`, content: res.text, at: new Date().toISOString() }]);
+      } catch (err) {
+        setPending(null);
+        setChat(before);
+        setDraft(question);
+        if (err?.name !== 'AbortError') setChatError({ text: err?.message || 'AI request failed.' });
+      }
+      return;
+    }
+
     const { data, status, aborted } = await callFunction(
       'ai-advisor',
       { mode: 'ask', period_days: PERIOD, messages: history.map(({ role, content }) => ({ role, content })) },
@@ -106,7 +184,6 @@ export default function AIAnalyzer() {
     );
     setPending(null);
     if (aborted || status !== 200) {
-      // Nothing was answered: take the question back out of the log and put it back in the box
       setChat(before);
       setDraft(question);
       if (!aborted) {
@@ -114,13 +191,17 @@ export default function AIAnalyzer() {
       }
       return;
     }
-    setChat([...history, { role: 'assistant', content: data.reply, at: new Date().toISOString() }]);
+    setChat([...history, { role: 'assistant', who: 'Claude', content: data.reply, at: new Date().toISOString() }]);
     setRequestsLeft((n) => (n === null ? n : Math.max(0, n - 1)));
   };
 
-  const onSubmit = (e) => {
-    e.preventDefault();
-    send(draft);
+  const exportChat = () => {
+    const md = [
+      '# VibeAssist Business Analyzer Chat',
+      '',
+      ...chat.flatMap((m) => [`### ${m.role === 'user' ? 'You' : (m.who || 'AI')}`, m.content, '']),
+    ].join('\n');
+    download('vibeassist-analyzer-chat.md', md, 'text/markdown;charset=utf-8');
   };
 
   if (rows === null) {
@@ -138,7 +219,7 @@ export default function AIAnalyzer() {
     <>
       <PageHeader
         title="AI Business & Profit Analyzer"
-        description="Growth and pricing figures worked out from your last 90 days, and a chat with Claude about them."
+        description="Unit economics, pricing elasticity, an interactive What-If simulator, and Q&A powered by your chosen AI."
       />
 
       {loadError && (
@@ -148,7 +229,7 @@ export default function AIAnalyzer() {
       )}
       {summary.sources.includes('sample') && (
         <div className="section">
-          <Notice tone="warning">Sample data is mixed into these numbers, so the figures below don't describe your real business.</Notice>
+          <Notice tone="warning">Sample data is mixed into these numbers, so the figures below don&apos;t describe your real business.</Notice>
         </div>
       )}
 
@@ -162,7 +243,7 @@ export default function AIAnalyzer() {
             <Figure label="Downloads" value={formatCount(current.downloads)} />
             <Figure label="Days with data" value={`${current.daysWithData} of ${PERIOD}`} />
           </dl>
-          <ContextPreview profile={profile} summary={summary} campaigns={campaignCount} period={PERIOD} />
+          <ContextPreview profile={profile} summary={summary} campaigns={campaignRows.length} period={PERIOD} />
           <button type="button" className="btn btn-secondary btn-sm analyzer-ask" onClick={() => prefill(STARTERS[0])}>
             <MessageSquare aria-hidden="true" /> Ask about my numbers
           </button>
@@ -193,7 +274,7 @@ export default function AIAnalyzer() {
               onChange={(e) => setChurn(e.target.value)}
               aria-describedby="churn-help"
             />
-            <p className="field-help" id="churn-help">Share of paying users who leave each month. Used only for LTV; it's your assumption, not measured.</p>
+            <p className="field-help" id="churn-help">Share of paying users who leave each month. Used only for LTV.</p>
           </div>
           {economics.missing.length > 0 && (
             <p className="field-help">To fill in the rest, add {economics.missing.join(', ')}.</p>
@@ -227,17 +308,15 @@ export default function AIAnalyzer() {
               </dl>
               <p className="field-help">
                 {pricing.change.elasticity >= 0
-                  ? 'Purchases moved the same way as price, so something else (a launch, ads, the season) probably drove them. Treat this as noise.'
+                  ? 'Purchases moved the same way as price, so something else probably drove them.'
                   : Math.abs(pricing.change.elasticity) < 1
-                    ? 'Purchases changed less than price did: buyers looked price-insensitive, so a higher price brought in more revenue.'
-                    : 'Purchases changed more than price did: buyers looked price-sensitive, so a higher price brought in less revenue.'}
-                {' '}Only a rough signal: other things changed in those weeks too.
+                    ? 'Purchases changed less than price did: higher price brought in more revenue.'
+                    : 'Purchases changed more than price did: buyers looked price-sensitive.'}
               </p>
             </>
           ) : latestPrice !== null ? (
             <p className="analyzer-text">
-              Revenue per purchase stayed within 10% from week to week (latest {money(latestPrice)}), so your data has no price change to measure.
-              To learn how buyers react, try a price test: raise the price for new customers by about 20% for two weeks, then compare purchases.
+              Revenue per purchase stayed within 10% from week to week (latest {money(latestPrice)}). To test elasticity, try raising price by 20% for new users over two weeks.
             </p>
           ) : (
             <p className="analyzer-text">Add purchases to your days to see revenue per purchase and how it changes.</p>
@@ -254,12 +333,52 @@ export default function AIAnalyzer() {
         </section>
       </div>
 
+      <section className="card section" aria-labelledby="sim-title">
+        <div className="section-header">
+          <div>
+            <h2 id="sim-title" className="card-title"><Sliders className="inline-icon" aria-hidden="true" /> Interactive What-If Profit Simulator (90-Day Baseline)</h2>
+            <p className="card-subtitle">Model how pricing, conversion, or ad budget changes move your 90-day net profit.</p>
+          </div>
+          {(simPricePct !== 0 || simConvPct !== 0 || simAdPct !== 0) && (
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setSimPricePct(0); setSimConvPct(0); setSimAdPct(0); }}>Reset</button>
+          )}
+        </div>
+        <div className="grid-3" style={{ marginTop: 12 }}>
+          <div className="field">
+            <label className="field-label" htmlFor="sim-price">Price change: {simPricePct >= 0 ? `+${simPricePct}%` : `${simPricePct}%`}</label>
+            <input id="sim-price" type="range" min="-50" max="100" step="5" value={simPricePct} onChange={(e) => setSimPricePct(Number(e.target.value))} />
+          </div>
+          <div className="field">
+            <label className="field-label" htmlFor="sim-conv">Conversion lift: {simConvPct >= 0 ? `+${simConvPct}%` : `${simConvPct}%`}</label>
+            <input id="sim-conv" type="range" min="-50" max="100" step="5" value={simConvPct} onChange={(e) => setSimConvPct(Number(e.target.value))} />
+          </div>
+          <div className="field">
+            <label className="field-label" htmlFor="sim-ads">Ad spend change: {simAdPct >= 0 ? `+${simAdPct}%` : `${simAdPct}%`}</label>
+            <input id="sim-ads" type="range" min="-50" max="200" step="5" value={simAdPct} onChange={(e) => setSimAdPct(Number(e.target.value))} />
+          </div>
+        </div>
+        <div className="stat-grid" style={{ marginTop: 12 }}>
+          <div className="card stat"><p className="stat-label">Simulated 90d Revenue</p><p className="stat-value">{formatMoney(sim.simRevenue, currency)}</p></div>
+          <div className="card stat"><p className="stat-label">Simulated 90d Ad Spend</p><p className="stat-value">{formatMoney(sim.simAds, currency)}</p></div>
+          <div className="card stat"><p className="stat-label">Simulated 90d Net Profit</p><p className="stat-value">{formatMoney(sim.simProfit, currency)}</p></div>
+          <div className="card stat">
+            <p className="stat-label">Profit Impact</p>
+            <p className="stat-value" style={{ color: sim.deltaProfit >= 0 ? 'var(--app-success)' : 'var(--app-danger)' }}>
+              {sim.deltaProfit >= 0 ? '+' : ''}{formatMoney(sim.deltaProfit, currency)}
+            </p>
+          </div>
+        </div>
+      </section>
+
       <section className="card section" aria-labelledby="chat-title">
         <div className="section-header">
           <h2 id="chat-title" className="card-title">Chat with your numbers</h2>
           <div className="page-actions">
-            {requestsLeft !== null && (
-              <span className="field-help">{outOfRequests ? `You've used all ${DAILY_LIMIT} requests for today.` : `${requestsLeft} of ${DAILY_LIMIT} requests left today`}</span>
+            {!importedAi && requestsLeft !== null && (
+              <span className="field-help">{outOfRequests ? `Used all ${DAILY_LIMIT} cloud requests today.` : `${requestsLeft} of ${DAILY_LIMIT} cloud requests left`}</span>
+            )}
+            {chat.length > 0 && (
+              <button type="button" className="btn btn-ghost btn-sm" onClick={exportChat}><FileDown aria-hidden="true" /> Export .md</button>
             )}
             {chat.length > 0 && !pending && (
               <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setChat([]); setChatError(null); }}>New chat</button>
@@ -267,24 +386,40 @@ export default function AIAnalyzer() {
           </div>
         </div>
 
+        <div style={{ margin: '10px 0 12px' }}>
+          <ModelSelectorPill feature="analyzer" hasPremium={hasPremium} />
+        </div>
+
         <div className="chat-log" role="log" aria-live="polite" aria-label="Conversation">
           <div className="chat-msg chat-msg--assistant">
             <p className="chat-who">VibeAssist</p>
             <p>
               {firstName ? `Hi ${firstName}. ` : 'Hi. '}
-              Claude can see your last 90 days of numbers{profile?.goals?.length ? ` and your goals (${profile.goals.join(', ').toLowerCase()})` : ''}.
-              Ask about pricing, ads, growth or anything in your data.
+              {importedAi ? `${importedAi.label} (${importedAi.defaultModel})` : 'Claude'} can see your last 90 days of numbers{profile?.goals?.length ? ` and your goals (${profile.goals.join(', ').toLowerCase()})` : ''}.
+              Ask about pricing, ads, growth, or anything in your data.
             </p>
           </div>
           {chat.map((m) => (
             <div key={m.at + m.role} className={`chat-msg chat-msg--${m.role}`}>
-              <p className="chat-who">{m.role === 'user' ? 'You' : 'Claude'}</p>
+              <div className="flex-between">
+                <p className="chat-who">{m.role === 'user' ? 'You' : (m.who || 'AI')}</p>
+                {m.role === 'assistant' && (
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => navigator.clipboard.writeText(m.content).then(() => toast.show({ message: 'Reply copied.' })).catch(() => {})}
+                    aria-label="Copy reply"
+                  >
+                    <Copy aria-hidden="true" />
+                  </button>
+                )}
+              </div>
               <p className="chat-text">{m.content}</p>
             </div>
           ))}
           {pending && (
             <div className="chat-msg chat-msg--assistant chat-msg--pending">
-              <p className="chat-who">Claude</p>
+              <p className="chat-who">{pending.who}</p>
               <p><span className="spinner" /> Looking at your numbers… <Elapsed since={pending.since} /></p>
             </div>
           )}
@@ -302,18 +437,18 @@ export default function AIAnalyzer() {
         {chatError && (
           <div style={{ marginTop: 12 }}>
             {chatError.notConfigured ? (
-              <Notice tone="warning" title="The analyzer isn't set up for this app yet">
-                The <code>ANTHROPIC_API_KEY</code> secret is missing in Supabase (Edge Functions → Secrets). Nothing was sent to Claude. Your question is still in the box.
+              <Notice tone="warning" title="VibeAssist Cloud Claude isn't configured on this deployment">
+                <Link to="/ai-models">Import your own Gemini, Claude, OpenAI, or local Ollama model</Link> to chat with your numbers immediately.
               </Notice>
             ) : (
               <Notice tone="error" actions={<button type="button" className="btn btn-secondary btn-sm" onClick={() => send(draft)}><RotateCcw aria-hidden="true" /> Try again</button>}>
-                {chatError.text} Your question is still in the box.
+                {chatError.text}
               </Notice>
             )}
           </div>
         )}
 
-        <form className="chat-form" onSubmit={onSubmit}>
+        <form className="chat-form" onSubmit={(e) => { e.preventDefault(); send(draft); }}>
           <label className="visually-hidden" htmlFor="chat-input">Message</label>
           <textarea
             id="chat-input"
@@ -340,7 +475,6 @@ export default function AIAnalyzer() {
             </button>
           )}
         </form>
-        <p className="field-help" style={{ marginTop: 6 }}>Enter to send, Shift + Enter for a new line. Answers are written by Claude from your data and can be wrong.</p>
       </section>
     </>
   );

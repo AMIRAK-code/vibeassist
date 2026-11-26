@@ -1,15 +1,25 @@
 import React, { useMemo, useState } from 'react';
+import { Copy, FileDown } from 'lucide-react';
 import { useToast } from '../ui/toast-context';
 import { friendlyError, supabase } from '../../lib/supabase';
+import { download } from '../../lib/download';
 import { bySeverity, moduleTitle, OUTCOME_LABEL, SEVERITY_ORDER, SEVERITY_TONE } from '../../lib/engine';
 
-// What the selected run found, with what changed since the last run, and triage
+// What the selected run found, with what changed since the last run, triage, search, and AI fix prompts
 export default function FindingsList({ run, findings, onChanged }) {
   const toast = useToast();
   const [severity, setSeverity] = useState('all');
+  const [search, setSearch] = useState('');
   const [showDismissed, setShowDismissed] = useState(false);
+
   const sorted = useMemo(() => [...findings].sort(bySeverity), [findings]);
-  const visible = sorted.filter((f) => (severity === 'all' || f.severity === severity) && (showDismissed || f.status !== 'dismissed'));
+  const q = search.trim().toLowerCase();
+  const visible = sorted.filter((f) => {
+    if (severity !== 'all' && f.severity !== severity) return false;
+    if (!showDismissed && f.status === 'dismissed') return false;
+    if (q && !`${f.title} ${f.file ?? ''} ${f.explanation ?? ''}`.toLowerCase().includes(q)) return false;
+    return true;
+  });
   const counts = Object.fromEntries(SEVERITY_ORDER.map((s) => [s, findings.filter((f) => f.severity === s && f.status !== 'dismissed').length]));
 
   const setStatus = async (finding, status) => {
@@ -20,6 +30,38 @@ export default function FindingsList({ run, findings, onChanged }) {
     }
     onChanged();
     if (status === 'dismissed') toast.show({ message: `Dismissed “${finding.title}”.`, actionLabel: 'Undo', onAction: () => setStatus(finding, 'open') });
+  };
+
+  const copyFixPrompt = async (f) => {
+    const prompt = [
+      `Fix the following ${f.severity} issue found by VibeAssist (${moduleTitle(run.module)}):`,
+      `Title: ${f.title}`,
+      f.file ? `Location: ${f.file}${f.line_start ? `:${f.line_start}` : ''}` : null,
+      f.evidence ? `Evidence:\n\`\`\`\n${f.evidence}\n\`\`\`` : null,
+      f.explanation ? `Context: ${f.explanation}` : null,
+      f.fix ? `Suggested fix: ${f.fix}` : null,
+    ].filter(Boolean).join('\n\n');
+    try {
+      await navigator.clipboard.writeText(prompt);
+      toast.show({ message: 'AI fix prompt copied.' });
+    } catch {
+      toast.show({ message: 'Copy blocked by browser.', tone: 'error' });
+    }
+  };
+
+  const exportMarkdown = () => {
+    const md = [
+      `# ${moduleTitle(run.module)} Findings`,
+      '',
+      ...visible.map((f) => [
+        `## [${f.severity.toUpperCase()}] ${f.title}`,
+        f.file ? `- File: \`${f.file}${f.line_start ? `:${f.line_start}` : ''}\`` : null,
+        f.explanation || null,
+        f.fix ? `**Fix:** ${f.fix}` : null,
+        '',
+      ].filter(Boolean).join('\n')),
+    ].join('\n');
+    download(`findings-${run.module}.md`, md, 'text/markdown;charset=utf-8');
   };
 
   if (!run) return null;
@@ -33,7 +75,19 @@ export default function FindingsList({ run, findings, onChanged }) {
           <h2 id="findings-title">Findings · {moduleTitle(run.module)}</h2>
           {run.summary && <p className="field-help" style={{ whiteSpace: 'pre-line' }}>{run.summary}</p>}
         </div>
-        {run.outcome && <span className={`badge ${run.outcome === 'pass' ? 'badge--success' : run.outcome === 'fail' ? 'badge--danger' : 'badge--warning'}`}>{OUTCOME_LABEL[run.outcome]}</span>}
+        <div className="page-actions">
+          {findings.length > 0 && (
+            <>
+              <button type="button" className="btn btn-ghost btn-sm" onClick={exportMarkdown}>
+                <FileDown aria-hidden="true" /> .md
+              </button>
+              <button type="button" className="btn btn-ghost btn-sm" onClick={() => download(`findings-${run.module}.json`, JSON.stringify(visible, null, 2), 'application/json;charset=utf-8')}>
+                <FileDown aria-hidden="true" /> .json
+              </button>
+            </>
+          )}
+          {run.outcome && <span className={`badge ${run.outcome === 'pass' ? 'badge--success' : run.outcome === 'fail' ? 'badge--danger' : 'badge--warning'}`}>{OUTCOME_LABEL[run.outcome]}</span>}
+        </div>
       </div>
 
       {(diff || backtest) && (
@@ -51,6 +105,16 @@ export default function FindingsList({ run, findings, onChanged }) {
               <button key={s} type="button" aria-pressed={severity === s} onClick={() => setSeverity(s)}>{s[0].toUpperCase() + s.slice(1)} · {counts[s]}</button>
             ))}
           </div>
+          <label className="visually-hidden" htmlFor="finding-search">Search findings</label>
+          <input
+            id="finding-search"
+            type="search"
+            className="input-field input-sm"
+            style={{ width: 200 }}
+            placeholder="Filter file or title…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
           <label className="check-row" style={{ padding: 0 }}>
             <input type="checkbox" checked={showDismissed} onChange={(e) => setShowDismissed(e.target.checked)} /> Show dismissed
           </label>
@@ -74,6 +138,9 @@ export default function FindingsList({ run, findings, onChanged }) {
             {f.explanation && <p className="finding-text">{f.explanation}</p>}
             {f.fix && <p className="finding-text"><strong>Fix:</strong> {f.fix}</p>}
             <div className="page-actions">
+              <button type="button" className="btn btn-secondary btn-sm" onClick={() => copyFixPrompt(f)}>
+                <Copy aria-hidden="true" /> Copy AI Fix Prompt
+              </button>
               {f.status === 'dismissed'
                 ? <button type="button" className="btn btn-ghost btn-sm" onClick={() => setStatus(f, 'open')}>Reopen</button>
                 : <button type="button" className="btn btn-ghost btn-sm" onClick={() => setStatus(f, 'dismissed')}>Dismiss<span className="visually-hidden">: {f.title}</span></button>}

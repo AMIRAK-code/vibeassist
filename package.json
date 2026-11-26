@@ -9,13 +9,16 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "vitest run",
-    "deploy": "vite build && wrangler deploy"
+    "deploy": "vite build && wrangler deploy",
+    "desktop:dev": "tauri dev",
+    "desktop:build": "tauri build"
   },
   "dependencies": {
     "@fontsource-variable/outfit": "^5.3.0",
     "@fontsource-variable/plus-jakarta-sans": "^5.3.0",
     "@fontsource/ibm-plex-mono": "^5.3.0",
     "@supabase/supabase-js": "^2.117.2",
+    "@tauri-apps/api": "^2.12.5",
     "lucide-react": "^1.48.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
@@ -23,6 +26,7 @@
     "recharts": "^3.10.1"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2.12.6",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^6.1.1",
