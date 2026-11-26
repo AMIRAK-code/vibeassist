@@ -1,16 +1,20 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Download } from 'lucide-react';
+import { Download, Cpu } from 'lucide-react';
 import { useAuth } from '../context/auth';
 import { useToast } from '../components/ui/toast-context';
 import { friendlyError, supabase } from '../lib/supabase';
 import { CURRENCIES, EXPERIENCE_OPTIONS, GOALS, PROFIT_OPTIONS } from '../lib/options';
 import { METRIC_COLUMNS } from '../lib/metrics';
 import { downloadCsv } from '../lib/csv';
+import { download } from '../lib/download';
+import { clearBrowserAiVault, useImportedAi } from '../lib/aiClient';
 import { openBillingPortal, planSummary } from '../lib/billing';
+import { resetSuperuserDb } from '../lib/superuserSandbox';
 import { authMessage } from '../lib/authErrors';
 import PageHeader from '../components/ui/PageHeader';
 import Notice from '../components/ui/Notice';
+import ConfirmButton from '../components/ui/ConfirmButton';
 import NewsletterSettings from '../components/NewsletterSettings';
 import { usePreset } from '../context/preset';
 
@@ -60,6 +64,7 @@ const listOf = (items) => (items.length < 2 ? items.join('') : `${items.slice(0,
 
 export default function Settings() {
   const { user, profile, subscription, hasPremium, refreshAccount, signOut } = useAuth();
+  const { models: aiModels, active: activeAi } = useImportedAi('default');
   const toast = useToast();
   const navigate = useNavigate();
   const [form, setForm] = useState(() => pick(profile));
@@ -215,6 +220,27 @@ export default function Settings() {
     toast.show({ message: `Exported ${data.length} rows.` });
   };
 
+  const exportFullBackup = async () => {
+    setBusy('backup');
+    const [metrics, campaigns, legalDocs, handoffs] = await Promise.all([
+      supabase.from('daily_metrics').select(METRIC_COLUMNS).order('day').range(0, 19999),
+      supabase.from('ad_campaigns').select('network, name, status, spend, revenue, installs, created_at'),
+      supabase.from('legal_documents').select('kind, title, inputs, sections, created_at'),
+      supabase.from('handoffs').select('title, source, method, sections, created_at'),
+    ]);
+    setBusy('');
+    const bundle = {
+      exportedAt: new Date().toISOString(),
+      profile: form,
+      daily_metrics: metrics.data ?? [],
+      ad_campaigns: campaigns.data ?? [],
+      legal_documents: legalDocs.data ?? [],
+      handoffs: handoffs.data ?? [],
+    };
+    download(`vibeassist-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(bundle, null, 2), 'application/json;charset=utf-8');
+    toast.show({ message: 'Downloaded full JSON workspace backup.' });
+  };
+
   const plan = planSummary(subscription);
   const demoPlan = hasPremium && subscription?.source === 'demo';
 
@@ -328,26 +354,75 @@ export default function Settings() {
         {hasPremium && subscription?.source === 'stripe' && (
           <p className="field-help" style={{ marginTop: 10 }}>Change plan, update your card, download invoices or cancel on Stripe's billing page.</p>
         )}
+        {user?.user_metadata?.role === 'superuser' && (
+          <div style={{ marginTop: 12 }}>
+            <Notice
+              tone="info"
+              actions={(
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={async () => {
+                    resetSuperuserDb();
+                    await loadLatest();
+                    await refreshAccount();
+                    toast.show({ message: 'Superuser sandbox data reset to defaults.' });
+                  }}
+                >
+                  Reset sandbox demo data
+                </button>
+              )}
+            >
+              Superuser sandbox active (test:1234 · Full Admin Premium)
+            </Notice>
+          </div>
+        )}
       </section>
 
       <AppearanceSettings />
 
+      <section className="card section" aria-labelledby="ai-vault-title">
+        <div className="section-header">
+          <div>
+            <h2 id="ai-vault-title" className="card-title"><Cpu className="inline-icon" aria-hidden="true" /> Connected AI Keys &amp; Local Models</h2>
+            <p className="card-subtitle">
+              {aiModels.length
+                ? `${aiModels.length} model${aiModels.length === 1 ? '' : 's'} connected locally in this browser. Active default: ${activeAi ? `${activeAi.label} (${activeAi.defaultModel})` : 'VibeAssist Cloud'}.`
+                : 'No browser AI keys saved yet. Import Gemini, Claude, OpenAI, or local Ollama.'}
+            </p>
+          </div>
+          <div className="page-actions">
+            <Link to="/ai-models" className="btn btn-secondary btn-sm">Open Import Your AI</Link>
+            {aiModels.length > 0 && (
+              <ConfirmButton
+                label="Clear local keys"
+                question="Wipe all browser-stored AI keys on this device?"
+                busyLabel="Clearing…"
+                onConfirm={() => { clearBrowserAiVault(); toast.show({ message: 'Cleared browser AI vault.' }); }}
+              />
+            )}
+          </div>
+        </div>
+      </section>
+
       <NewsletterSettings />
 
       <section className="card section" aria-labelledby="account-title">
-        <h2 id="account-title" className="card-title">Account</h2>
+        <h2 id="account-title" className="card-title">Account &amp; Sessions</h2>
         <p style={{ marginTop: 6 }}>Signed in as <strong>{user?.email}</strong></p>
         <div className="page-actions" style={{ marginTop: 12 }}>
           <button type="button" className="btn btn-secondary" onClick={sendReset} disabled={busy === 'reset'}>{busy === 'reset' ? 'Sending…' : 'Email me a password reset link'}</button>
-          <button type="button" className="btn btn-ghost" onClick={async () => { await signOut(); navigate('/', { replace: true }); }}>Sign out</button>
+          <button type="button" className="btn btn-ghost" onClick={async () => { await signOut(); navigate('/', { replace: true }); }}>Sign out this device</button>
+          <button type="button" className="btn btn-ghost" onClick={async () => { await supabase.auth.signOut({ scope: 'global' }); navigate('/', { replace: true }); }}>Sign out everywhere</button>
         </div>
       </section>
 
       <section className="card section" aria-labelledby="data-title">
         <h2 id="data-title" className="card-title">Your data</h2>
-        <p className="card-subtitle">Every daily number from every source, as a spreadsheet-friendly CSV.</p>
+        <p className="card-subtitle">Export all daily figures as CSV, or download a complete JSON backup of metrics, campaigns, legal drafts, and handoffs.</p>
         <div className="page-actions" style={{ marginTop: 12 }}>
-          <button type="button" className="btn btn-secondary" onClick={exportAll} disabled={busy === 'export'}><Download aria-hidden="true" /> {busy === 'export' ? 'Preparing…' : 'Download all numbers'}</button>
+          <button type="button" className="btn btn-secondary" onClick={exportAll} disabled={busy === 'export'}><Download aria-hidden="true" /> {busy === 'export' ? 'Preparing…' : 'Download CSV numbers'}</button>
+          <button type="button" className="btn btn-secondary" onClick={exportFullBackup} disabled={busy === 'backup'}><Download aria-hidden="true" /> {busy === 'backup' ? 'Preparing…' : 'Full JSON Backup'}</button>
         </div>
       </section>
     </>

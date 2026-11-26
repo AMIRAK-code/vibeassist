@@ -65,6 +65,7 @@ export default function Dashboard() {
   const currency = profile?.currency ?? 'USD';
   const [period, setPeriod] = usePersistentState('overview-period', 30);
   const [metric, setMetric] = usePersistentState('overview-metric', 'all');
+  const [sourceFilter, setSourceFilter] = useState('all');
   const [rows, setRows] = useState(null); // null while loading
   const [totalRows, setTotalRows] = useState(null);
   const [connections, setConnections] = useState([]); // connected sources that can be synced
@@ -97,10 +98,16 @@ export default function Dashboard() {
   }, [period, hasPremium]);
 
   useEffect(() => {
-    load();
+    const t = setTimeout(() => { load(); }, 0);
+    return () => clearTimeout(t);
   }, [load]);
 
-  const summary = useMemo(() => summarize(rows ?? [], period), [rows, period]);
+  const allSources = useMemo(() => [...new Set((rows ?? []).map((r) => r.source))], [rows]);
+  const filteredRows = useMemo(
+    () => (sourceFilter === 'all' ? (rows ?? []) : (rows ?? []).filter((r) => r.source === sourceFilter)),
+    [rows, sourceFilter],
+  );
+  const summary = useMemo(() => summarize(filteredRows, period), [filteredRows, period]);
   const { current, previous, chartData, latestActiveUsers, latestActiveUsersDay, sources } = summary;
   const manualEntries = useMemo(
     () => Object.fromEntries((rows ?? []).filter((r) => r.source === 'manual').map((r) => [r.day, r])),
@@ -108,11 +115,15 @@ export default function Dashboard() {
   );
   const manualList = useMemo(() => Object.values(manualEntries).sort((a, b) => b.day.localeCompare(a.day)), [manualEntries]);
   const latestDay = useMemo(() => (rows ?? []).reduce((max, r) => (r.day > max ? r.day : max), ''), [rows]);
-  const hasSample = sources.includes('sample');
+  const hasSample = allSources.includes('sample');
   const firstUse = totalRows === 0;
 
   const profit = current.revenue - current.fees - current.adSpend;
   const previousProfit = previous.revenue - previous.fees - previous.adSpend;
+  const netMargin = current.revenue > 0 ? (profit / current.revenue) * 100 : null;
+  const monthlyRunRate = period > 0 ? (profit / period) * 30 : profit;
+  const targetAmount = { '$0 - $1,000': 1000, '$1,000 - $10,000': 10000, '$10k - $50k': 50000, '$50k+': 50000 }[profile?.profit_expectancy] ?? 1000;
+  const goalPct = Math.max(0, Math.min(100, (monthlyRunRate / targetAmount) * 100));
   const conversion = current.downloads > 0 && current.purchases > 0 ? (current.purchases / current.downloads) * 100 : null;
   const previousConversion = previous.downloads > 0 && previous.purchases > 0 ? (previous.purchases / previous.downloads) * 100 : null;
   const chartMetric = CHART_METRICS.find((m) => m.key === metric) ?? CHART_METRICS[0];
@@ -241,6 +252,7 @@ export default function Dashboard() {
             <button type="button" className="btn btn-secondary" onClick={refreshAll} disabled={Boolean(busy)} aria-busy={busy === 'refresh'}>
               <RefreshCw aria-hidden="true" /> {busy === 'refresh' ? 'Refreshing…' : 'Refresh Data'}
             </button>
+            <Link className="btn btn-secondary" to="/integrations#csv-import">Import CSV</Link>
             <button type="button" className="btn btn-secondary" onClick={exportCsv}><Download aria-hidden="true" /> Export CSV</button>
             <button type="button" className="btn btn-primary" onClick={() => openEntry()} disabled={Boolean(entry)}>
               <Plus aria-hidden="true" /> Add a day
@@ -347,6 +359,34 @@ export default function Dashboard() {
             )}
           </div>
 
+          <div className="card section pacing-card">
+            <div className="section-header">
+              <div>
+                <p className="stat-label">Monthly Profit Goal Pacing ({profile?.profit_expectancy ?? '$0 - $1,000'})</p>
+                <p style={{ marginTop: 4 }}>
+                  <strong>{formatMoney(monthlyRunRate, currency)}</strong> / mo run-rate
+                  {netMargin !== null && <span className="field-help"> · {netMargin.toFixed(1)}% net margin</span>}
+                </p>
+              </div>
+              {allSources.length > 1 && (
+                <div className="segmented segmented--wrap" role="group" aria-label="Filter by source">
+                  <button type="button" aria-pressed={sourceFilter === 'all'} onClick={() => setSourceFilter('all')}>All sources</button>
+                  {allSources.map((s) => (
+                    <button key={s} type="button" aria-pressed={sourceFilter === s} onClick={() => setSourceFilter(s)}>
+                      {SOURCE_LABELS[s] ?? s}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="pacing-bar" role="progressbar" aria-valuenow={Math.round(goalPct)} aria-valuemin={0} aria-valuemax={100} aria-label="Monthly profit goal progress">
+              <div className="pacing-bar-fill" style={{ width: `${goalPct}%` }} />
+            </div>
+            <p className="field-help" style={{ marginTop: 6 }}>
+              {goalPct.toFixed(0)}% of {formatMoney(targetAmount, currency)} monthly benchmark · {formatMoneyExact(profit / Math.max(1, period), currency)}/day average net profit.
+            </p>
+          </div>
+
           <div className="stat-grid stat-grid--five section">
             <Stat label={`Total Revenue · last ${period} days`} icon={DollarSign} value={formatMoney(current.revenue, currency)} delta={change(current.revenue, previous.revenue)} periodDays={period} />
             <Stat label="Profit after fees and ads" icon={PiggyBank} value={formatMoney(profit, currency)} delta={previousProfit > 0 ? change(profit, previousProfit) : null} periodDays={period} />
@@ -439,6 +479,7 @@ export default function Dashboard() {
                       <th scope="col">Day</th>
                       <th scope="col" className="num">Revenue</th>
                       <th scope="col" className="num">Profit</th>
+                      <th scope="col" className="num">Margin</th>
                       <th scope="col" className="num">Ad spend</th>
                       <th scope="col" className="num">Organic installs</th>
                       <th scope="col" className="num">Paid acquisition</th>
@@ -453,13 +494,14 @@ export default function Dashboard() {
                           <>
                             <td className="num">{formatMoneyExact(d.revenue, currency)}</td>
                             <td className="num">{formatMoneyExact(d.profit, currency)}</td>
+                            <td className="num">{d.revenue > 0 ? `${((d.profit / d.revenue) * 100).toFixed(0)}%` : '—'}</td>
                             <td className="num">{formatMoneyExact(d.adSpend, currency)}</td>
                             <td className="num">{formatCount(d.organicDownloads)}</td>
                             <td className="num">{formatCount(d.paidDownloads)}</td>
                             <td className="num">{d.activeUsers === null ? '—' : formatCount(d.activeUsers)}</td>
                           </>
                         ) : (
-                          <td colSpan={6} className="muted">No data</td>
+                          <td colSpan={7} className="muted">No data</td>
                         )}
                       </tr>
                     ))}

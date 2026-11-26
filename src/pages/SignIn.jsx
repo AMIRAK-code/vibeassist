@@ -100,8 +100,8 @@ export default function SignIn() {
         )}
 
         <div className="field">
-          <label className="field-label" htmlFor="signin-email">Email</label>
-          <input id="signin-email" type="email" className="input-field" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+          <label className="field-label" htmlFor="signin-email">Email or username</label>
+          <input id="signin-email" type="text" className="input-field" autoComplete="username" placeholder="you@example.com or test" required value={email} onChange={(e) => setEmail(e.target.value)} />
         </div>
         <div className="field">
           <label className="field-label" htmlFor="signin-password">Password</label>
@@ -113,6 +113,28 @@ export default function SignIn() {
 
         <button type="submit" className="btn btn-primary w-full" disabled={Boolean(busy)} aria-busy={busy === 'signin'}>
           {busy === 'signin' ? <><span className="spinner spinner--light" /> Signing in…</> : 'Sign in'}
+        </button>
+        <button
+          type="button"
+          className="btn btn-secondary w-full"
+          style={{ marginTop: 8 }}
+          disabled={Boolean(busy)}
+          aria-busy={busy === 'superuser'}
+          onClick={async () => {
+            if (busy) return;
+            setError(null);
+            setNotice('');
+            setEmail('test');
+            setPassword('1234');
+            setBusy('superuser');
+            const { error: signInError } = await supabase.auth.signInWithPassword({ email: 'test', password: '1234' });
+            if (signInError) {
+              setBusy('');
+              setError({ text: authMessage(signInError, 'Could not sign in.') });
+            }
+          }}
+        >
+          {busy === 'superuser' ? 'Signing in…' : 'Sign in as Superuser (test / 1234)'}
         </button>
         <div className="flex-between" style={{ marginTop: 12, flexWrap: 'wrap', gap: 8 }}>
           <button type="button" className="btn btn-ghost btn-sm" onClick={sendReset} disabled={Boolean(busy)}>

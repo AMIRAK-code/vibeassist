@@ -19,6 +19,13 @@
   --ci-rule: #D6D1C7;          /* thin pale-stone dividers */
   --ci-hairline: #ECE7DE;      /* separators inside white surfaces */
   --ci-focus: #2448FF;
+  --ci-acid: #DFFF00;          /* expressive highlight */
+  --ci-acid-ink: #171717;      /* readable text on acid */
+  --ci-coral: #FF6B52;         /* warning/accent highlight */
+  --ci-ink-surface: #141413;   /* deep obsidian editorial band */
+  --ci-ink-elevated: #1F1E1C;
+  --ci-ink-border: #302E2A;
+  --ci-ink-muted: #B8B2A6;
 
   /* Type */
   --ci-font-sans: 'Plus Jakarta Sans Variable', 'Plus Jakarta Sans', system-ui, sans-serif;

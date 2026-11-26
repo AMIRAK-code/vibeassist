@@ -7,16 +7,22 @@ const FEATURES = {
     title: 'Anti-Fragile Engine',
     what: 'Guard the code you write with AI tools: secret and dependency scans, adversarial security and architecture reviews, drift from your own architecture rules, mutation testing, screenshot checks, snapshots you can rewind to, and an LLM gateway with fallbacks.',
     path: '/orchestrator',
+    altTo: '/publishing?tab=security',
+    altLabel: 'Open free Browser Security Lab',
   },
   'ai-analyzer': {
     title: 'AI Business Analyzer',
-    what: 'See cost per install, revenue per user, payback and lifetime value worked out from your numbers, check how buyers reacted to price changes, and chat with Claude about your last 90 days.',
+    what: 'See cost per install, revenue per user, payback and lifetime value worked out from your numbers, check how buyers reacted to price changes, and chat with AI about your last 90 days.',
     path: '/ai-analyzer',
+    altTo: '/ai-models',
+    altLabel: 'Or import your own AI key (free)',
   },
   plan: {
     title: 'Weekly Plan',
     what: 'Get a short weekly plan from your own numbers: three to five concrete steps, each showing the figures it is based on. Keep the steps you want and tick them off during the week.',
     path: '/plan',
+    altTo: '/ai-models',
+    altLabel: 'Or import your own AI key (free)',
   },
   ads: {
     title: 'Ad Manager',
@@ -35,15 +41,16 @@ export default function PremiumGate({ feature }) {
   return (
     <>
       <PageHeader title={info.title} />
-      <div className="card card--raised" style={{ maxWidth: 620 }}>
+      <div className="card card--raised" style={{ maxWidth: 640 }}>
         <span className="badge badge--cobalt">Premium</span>
         <p style={{ marginTop: 12, fontSize: 15 }}>{info.what}</p>
         <p className="muted" style={{ marginTop: 8, fontSize: 14 }}>
-          Overall Income, manual entry, Legal & Publishing guides and News & Newsletter stay free.
+          Overall Income, Import Your AI (BYOK &amp; Local Ollama), CSV imports, Legal &amp; Security Lab, Context Handoffs and News &amp; Newsletter stay free.
         </p>
         <div className="page-actions" style={{ marginTop: 18 }}>
           <Link className="btn btn-primary" to={`/premium?from=${encodeURIComponent(info.path)}`}>See Premium plans</Link>
-          <Link className="btn btn-secondary" to="/dashboard">Back to Overall Income</Link>
+          {info.altTo && <Link className="btn btn-secondary" to={info.altTo}>{info.altLabel}</Link>}
+          <Link className="btn btn-ghost" to="/dashboard">Back to Overall Income</Link>
         </div>
       </div>
     </>

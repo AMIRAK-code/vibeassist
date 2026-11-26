@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { Apple, Play, RefreshCw, Upload } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Apple, CheckCircle2, Copy, Play, RefreshCw, Upload } from 'lucide-react';
 import { useToast } from './ui/toast-context';
 import { callFunction } from '../lib/supabase';
 import { formatDateTime } from '../lib/format';
@@ -31,12 +32,15 @@ const STORES = {
   },
 };
 
-export default function StoreCard({ provider, integration, onChanged }) {
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export default function StoreCard({ provider, integration, onChanged, hasPremium = true }) {
   const toast = useToast();
   const store = STORES[provider];
   const Icon = store.icon;
   const [form, setForm] = useState(store.empty);
   const [fileName, setFileName] = useState('');
+  const [serviceEmail, setServiceEmail] = useState('');
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const connected = integration?.status === 'connected';
@@ -45,10 +49,28 @@ export default function StoreCard({ provider, integration, onChanged }) {
 
   const pickFile = async (e) => {
     const file = e.target.files?.[0];
-    e.target.value = ''; // the same file can be picked again after an error
+    e.target.value = '';
     if (!file) return;
     try {
       const text = await readKeyFile(file);
+      if (provider === 'app_store' && !/-----BEGIN PRIVATE KEY-----/.test(text)) {
+        setError('That .p8 file does not look like an Apple private key (missing BEGIN PRIVATE KEY header).');
+        return;
+      }
+      if (provider === 'google_play') {
+        let parsed;
+        try {
+          parsed = JSON.parse(text);
+        } catch {
+          setError('Invalid JSON file. Download the Service Account JSON key from Google Cloud.');
+          return;
+        }
+        if (parsed.type !== 'service_account' || !parsed.private_key || !parsed.client_email) {
+          setError('JSON must be a Google Cloud Service Account key containing client_email and private_key.');
+          return;
+        }
+        setServiceEmail(parsed.client_email);
+      }
       setForm((f) => ({ ...f, [store.fileField]: text }));
       setFileName(file.name);
       setError('');
@@ -57,11 +79,30 @@ export default function StoreCard({ provider, integration, onChanged }) {
     }
   };
 
+  const preflightWarning = useMemo(() => {
+    if (provider === 'app_store') {
+      if (form.issuerId.trim() && !UUID_RE.test(form.issuerId.trim())) return 'Issuer ID should look like a UUID (e.g. 69a6de70-…).';
+      if (form.keyId.trim() && !/^[A-Za-z0-9]{6,16}$/.test(form.keyId.trim())) return 'Key ID should be alphanumeric (usually 10 characters).';
+      if (form.vendorNumber.trim() && !/^\d{5,12}$/.test(form.vendorNumber.trim())) return 'Vendor number contains digits only.';
+    } else if (form.bucket.trim() && !form.bucket.trim().startsWith('gs://')) {
+      return 'Cloud Storage URI usually starts with gs:// (we will normalize it when connecting).';
+    }
+    return '';
+  }, [provider, form]);
+
   const act = async (action) => {
     if (busy) return;
+    if (!hasPremium && action === 'connect') {
+      setError('Automated 90-day store sync requires Premium. You can import Store CSV reports for free above.');
+      return;
+    }
     setBusy(action);
     setError('');
-    const { data, status } = await callFunction('store-sync', { provider, action, ...(action === 'connect' ? { credentials: form } : {}) });
+    const payloadForm = provider === 'google_play' && form.bucket.trim() && !form.bucket.trim().startsWith('gs://')
+      ? { ...form, bucket: `gs://${form.bucket.trim().replace(/^\/+/, '')}` }
+      : form;
+
+    const { data, status } = await callFunction('store-sync', { provider, action, ...(action === 'connect' ? { credentials: payloadForm } : {}) });
     setBusy('');
     if (status !== 200) {
       setError(data?.error ?? `${store.title} request failed. Try again.`);
@@ -72,9 +113,9 @@ export default function StoreCard({ provider, integration, onChanged }) {
       toast.show({ message: `${store.title} disconnected. Days already imported stay on Overall Income.` });
     } else {
       if (action === 'connect') {
-        // The key is now encrypted on the server; drop the copy in this page
         setForm(store.empty);
         setFileName('');
+        setServiceEmail('');
       }
       toast.show({ message: `${store.short}: ${describeSync(provider, data)}.`, tone: data.partial ? 'error' : undefined });
     }
@@ -84,6 +125,15 @@ export default function StoreCard({ provider, integration, onChanged }) {
   const canConnect = provider === 'app_store'
     ? form.issuerId.trim() && form.keyId.trim() && form.vendorNumber.trim() && form.privateKey
     : form.serviceAccount && form.bucket.trim();
+
+  const copyEmail = async () => {
+    try {
+      await navigator.clipboard.writeText(serviceEmail);
+      toast.show({ message: 'Service account email copied.' });
+    } catch {
+      toast.show({ message: 'Copy blocked by browser.', tone: 'error' });
+    }
+  };
 
   return (
     <section className="card" aria-labelledby={`${provider}-title`}>
@@ -107,7 +157,7 @@ export default function StoreCard({ provider, integration, onChanged }) {
             {settings.synced_through && ` · complete up to ${formatDay(settings.synced_through, true)}`}
             {provider === 'google_play' && settings.packages?.length ? ` · ${settings.packages.join(', ')}` : ''}.
             {provider === 'app_store'
-              ? ' Apple publishes each day\'s report the next day, so yesterday may still be missing.'
+              ? " Apple publishes each day's report the next day, so yesterday may still be missing."
               : ' Play updates its reports a few times a day, usually a day or two behind.'}
           </p>
           <div className="page-actions" style={{ marginTop: 12 }}>
@@ -127,6 +177,13 @@ export default function StoreCard({ provider, integration, onChanged }) {
         </>
       ) : (
         <form style={{ marginTop: 14 }} onSubmit={(e) => { e.preventDefault(); act('connect'); }}>
+          {!hasPremium && (
+            <div style={{ marginBottom: 12 }}>
+              <Notice tone="info" actions={<Link className="btn btn-secondary btn-sm" to="/premium?from=/integrations">See Premium</Link>}>
+                Automated 90-day server sync is included with Premium. You can still pre-validate your key here or import {store.short} CSV exports for free.
+              </Notice>
+            </div>
+          )}
           {integration?.status === 'error' && <div style={{ marginBottom: 12 }}><Notice tone="error">{integration.last_error} Upload a working key to reconnect.</Notice></div>}
 
           {provider === 'app_store' ? (
@@ -154,7 +211,7 @@ export default function StoreCard({ provider, integration, onChanged }) {
             <>
               <p className="field-help" style={{ marginBottom: 10 }}>
                 In Google Cloud, create a service account and download a JSON key for it. In Play Console → Users and permissions, invite the service
-                account's email with "View app information and download bulk reports" and "View financial data". Copy the Cloud Storage URI from
+                account&apos;s email with &quot;View app information and download bulk reports&quot; and &quot;View financial data&quot;. Copy the Cloud Storage URI from
                 Play Console → Download reports. New permissions can take up to a day to start working.
               </p>
               <div className="grid-3">
@@ -168,7 +225,7 @@ export default function StoreCard({ provider, integration, onChanged }) {
                   <span id="gp-packages-help" className="field-help">Leave empty to import every app in the account.</span>
                 </div>
                 <div className="field">
-                  <label className="field-label" htmlFor="gp-fee">Google's service fee</label>
+                  <label className="field-label" htmlFor="gp-fee">Google&apos;s service fee</label>
                   <select id="gp-fee" className="input-field" value={form.feeRate} onChange={set('feeRate')}>
                     <option value="0.15">15% (subscriptions, or the first $1M a year)</option>
                     <option value="0.3">30%</option>
@@ -183,12 +240,21 @@ export default function StoreCard({ provider, integration, onChanged }) {
             <div className="page-actions">
               <input type="file" id={`${provider}-key-file`} className="visually-hidden" accept={store.fileAccept} onChange={pickFile} />
               <label htmlFor={`${provider}-key-file`} className="btn btn-secondary btn-sm"><Upload aria-hidden="true" /> {fileName ? 'Choose another file' : 'Choose file'}</label>
-              <span className="field-help">{fileName || 'No file chosen'}. It's sent once over HTTPS and stored encrypted; VibeAssist only reads reports with it.</span>
+              <span className="field-help">
+                {fileName ? <><CheckCircle2 className="inline-icon" aria-hidden="true" style={{ color: 'var(--app-success)' }} /> {fileName} verified locally.</> : 'No file chosen. Sent once over HTTPS and stored encrypted.'}
+              </span>
             </div>
+            {serviceEmail && (
+              <div className="key-row" style={{ marginTop: 8 }}>
+                <code>Invite in Play Console: {serviceEmail}</code>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={copyEmail}><Copy aria-hidden="true" /> Copy email</button>
+              </div>
+            )}
           </div>
 
+          {preflightWarning && <p className="field-help" style={{ color: 'var(--app-warning)', marginBottom: 10 }}>{preflightWarning}</p>}
           {error && <div style={{ marginBottom: 12 }}><Notice tone="error">{error}</Notice></div>}
-          <button type="submit" className="btn btn-primary" disabled={Boolean(busy) || !canConnect} aria-busy={busy === 'connect'}>
+          <button type="submit" className="btn btn-primary" disabled={Boolean(busy) || !canConnect || !hasPremium} aria-busy={busy === 'connect'}>
             {busy === 'connect' ? <><span className="spinner spinner--light" /> Connecting and importing…</> : `Connect ${store.short}`}
           </button>
           {busy === 'connect' && <span className="field-help" style={{ marginLeft: 10 }}>The first import reads 90 days and can take a minute.</span>}

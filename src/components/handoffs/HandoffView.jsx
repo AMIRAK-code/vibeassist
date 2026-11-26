@@ -79,6 +79,9 @@ export default function HandoffView({ handoff, hasPremium, onSaved, onDelete }) 
             <button type="button" className="btn btn-primary btn-sm" onClick={() => copy(toAiPrompt(handoff), 'Copied. Paste it as the first message to your next AI.')}>
               <Sparkles aria-hidden="true" /> Copy for another AI
             </button>
+            <button type="button" className="btn btn-secondary btn-sm" onClick={() => copy(`# AGENTS.md — ${handoff.title}\n\n${toMarkdown(handoff)}`, 'Copied as AGENTS.md context.')}>
+              AGENTS.md
+            </button>
             <button type="button" className="btn btn-ghost btn-sm" onClick={() => copy(toMarkdown(handoff), 'Copied as Markdown.')}><Copy aria-hidden="true" /> Markdown</button>
             <button type="button" className="btn btn-ghost btn-sm" onClick={() => download(fileName(handoff), toMarkdown(handoff), 'text/markdown;charset=utf-8')}><FileDown aria-hidden="true" /> .md</button>
             <button type="button" className="btn btn-ghost btn-sm" onClick={startEdit}><PencilLine aria-hidden="true" /> Edit</button>

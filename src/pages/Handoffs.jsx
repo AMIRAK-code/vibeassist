@@ -15,6 +15,7 @@ export default function Handoffs() {
   const { hasPremium } = useAuth();
   const toast = useToast();
   const [handoffs, setHandoffs] = useState(null);
+  const [search, setSearch] = useState('');
   const [loadError, setLoadError] = useState('');
   const [selectedId, setSelectedId] = useState(null);
   const [ai, setAi] = useState({ label: "VibeAssist's Claude", ownKey: false });
@@ -51,7 +52,8 @@ export default function Handoffs() {
   }, [hasPremium]);
 
   useEffect(() => {
-    load();
+    const t = setTimeout(() => { load(); }, 0);
+    return () => clearTimeout(t);
   }, [load]);
 
   const created = (handoff) => {
@@ -105,8 +107,21 @@ export default function Handoffs() {
       ) : (
         <div className="legal-docs section">
           <div>
+            {handoffs.length > 2 && (
+              <div className="field" style={{ marginBottom: 8 }}>
+                <label className="visually-hidden" htmlFor="handoff-search">Search handoffs</label>
+                <input
+                  id="handoff-search"
+                  type="search"
+                  className="input-field input-sm"
+                  placeholder="Search saved handoffs…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+            )}
             <ul className="card card--flush legal-doc-list" aria-label="Your handoffs">
-              {handoffs.map((h) => (
+              {handoffs.filter((h) => !search.trim() || h.title.toLowerCase().includes(search.trim().toLowerCase())).map((h) => (
                 <li key={h.id}>
                   <button type="button" aria-current={selected?.id === h.id ? 'true' : undefined} onClick={() => setSelectedId(h.id)}>
                     <strong>{h.title}</strong>

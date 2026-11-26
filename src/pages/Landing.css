@@ -386,22 +386,32 @@
 .ci-ws-tabs {
   display: flex;
   align-items: center;
-  gap: calc(8 * var(--f));
-  padding-left: calc(13 * var(--f));
+  gap: calc(6 * var(--f));
+  padding: 0 calc(13 * var(--f));
   border-bottom: 1px solid var(--ci-hairline);
 }
 .ci-ws-tab {
   display: inline-flex;
   align-items: center;
-  gap: calc(11 * var(--f));
-  height: calc(40 * var(--f));
-  padding: 0 calc(23 * var(--f));
+  gap: calc(9 * var(--f));
+  height: calc(38 * var(--f));
+  padding: 0 calc(16 * var(--f));
+  border: 0;
   border-radius: calc(12 * var(--f));
+  background: transparent;
+  font: inherit;
   font-weight: 500;
   color: #2A2926;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color var(--ci-fast) var(--ci-ease), color var(--ci-fast) var(--ci-ease);
+}
+.ci-ws-tab:hover:not(.is-active) {
+  background: var(--ci-cobalt-tint);
+  color: var(--ci-cobalt);
 }
 .ci-ws-tab.is-active {
-  min-width: calc(128 * var(--f));
+  min-width: calc(108 * var(--f));
   color: #FFFFFF;
   font-weight: 600;
   background: linear-gradient(180deg, var(--ci-cobalt-light) 0%, var(--ci-cobalt) 50%, var(--ci-cobalt-deep) 100%);
@@ -487,6 +497,569 @@
   color: var(--ci-muted-soft);
 }
 
+/* Expressive spans & section typography ---------------------------------------- */
+
+.ci-accent-word {
+  color: var(--ci-cobalt);
+  -webkit-text-stroke: 0.012em currentColor;
+}
+
+.ci-inline-span {
+  color: var(--ci-ink);
+  font-weight: 600;
+  border-bottom: 2px solid var(--ci-cobalt);
+  padding-bottom: 1px;
+}
+
+.ci-acid-highlight {
+  display: inline-block;
+  background: var(--ci-acid);
+  color: var(--ci-acid-ink);
+  padding: 0 0.14em;
+  border-radius: 0.12em;
+  -webkit-text-stroke: 0;
+}
+
+.ci-display--sub {
+  font-size: clamp(36px, calc(60 * var(--u)), 64px);
+  line-height: 1.03;
+  letter-spacing: -0.05em;
+  -webkit-text-stroke: 0.01em currentColor;
+  margin-top: calc(14 * var(--u));
+}
+
+.ci-display--light { color: #FFFFFF; }
+.ci-eyebrow--light { color: var(--ci-acid); }
+
+/* Horizontal Signal Span Bar --------------------------------------------------- */
+
+.ci-span-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: calc(20 * var(--u));
+  padding: calc(32 * var(--u)) 0;
+}
+
+.ci-span-cell {
+  display: flex;
+  align-items: flex-start;
+  gap: calc(14 * var(--u));
+  padding-right: calc(16 * var(--u));
+  border-right: 1px solid var(--ci-rule);
+}
+.ci-span-cell:last-child { border-right: 0; padding-right: 0; }
+
+.ci-span-num {
+  font-family: var(--ci-font-mono);
+  font-size: calc(13 * var(--u));
+  font-weight: 500;
+  padding: calc(4 * var(--u)) calc(8 * var(--u));
+  border-radius: 6px;
+  background: var(--ci-cobalt-tint);
+  color: var(--ci-cobalt);
+  flex: none;
+}
+
+.ci-span-title {
+  font-size: calc(16 * var(--u));
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ci-ink);
+}
+
+.ci-span-desc {
+  margin-top: calc(4 * var(--u));
+  font-size: calc(14 * var(--u));
+  line-height: 1.45;
+  color: var(--ci-muted);
+}
+
+/* 3-Step Workflow Span under Section 01 ---------------------------------------- */
+
+.ci-workflow-span {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: calc(20 * var(--u));
+  padding: calc(20 * var(--u)) 0 calc(64 * var(--u));
+}
+
+.ci-workflow-step {
+  background: var(--ci-surface);
+  border: 1px solid var(--ci-rule);
+  border-radius: calc(18 * var(--u));
+  padding: calc(24 * var(--u));
+  box-shadow: 0 2px 6px rgba(92, 74, 46, 0.06);
+}
+.ci-workflow-step h3 {
+  font-size: calc(20 * var(--u));
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  margin-top: calc(12 * var(--u));
+}
+.ci-workflow-step p {
+  margin-top: calc(8 * var(--u));
+  font-size: calc(15 * var(--u));
+  line-height: 1.5;
+  color: var(--ci-muted);
+}
+
+/* Shared Editorial Section Layout ---------------------------------------------- */
+
+.ci-section {
+  padding: calc(84 * var(--u)) 0;
+}
+
+.ci-section-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: calc(32 * var(--u));
+  margin-bottom: calc(40 * var(--u));
+}
+
+.ci-section-aside {
+  max-width: 460px;
+}
+
+.ci-pill-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--ci-font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: var(--ci-surface-warm);
+  border: 1px solid var(--ci-rule);
+  color: var(--ci-ink);
+}
+.ci-pill-tag svg { width: 14px; height: 14px; color: var(--ci-cobalt); }
+.ci-pill-tag--cobalt {
+  background: var(--ci-cobalt-tint);
+  border-color: rgba(36, 72, 255, 0.25);
+  color: var(--ci-cobalt);
+}
+
+.ci-mono-meta {
+  font-family: var(--ci-font-mono);
+  font-size: 12.5px;
+  color: var(--ci-muted-soft);
+}
+
+/* Bento Capabilities ----------------------------------------------------------- */
+
+.ci-bento-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: calc(22 * var(--u));
+}
+
+.ci-card {
+  background: var(--ci-surface);
+  border: 1px solid var(--ci-rule);
+  border-radius: calc(22 * var(--u));
+  padding: calc(30 * var(--u));
+  box-shadow: var(--ci-clay-float);
+}
+.ci-card--wide {
+  grid-column: 1 / -1;
+}
+.ci-card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.ci-card h3 {
+  font-size: calc(24 * var(--u));
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  margin-top: calc(16 * var(--u));
+}
+.ci-card p {
+  margin-top: calc(10 * var(--u));
+  font-size: calc(16 * var(--u));
+  line-height: 1.55;
+  color: var(--ci-muted);
+  max-width: 66ch;
+}
+
+.ci-metric-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--ci-hairline);
+}
+.ci-metric-k {
+  display: block;
+  font-family: var(--ci-font-mono);
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ci-muted-soft);
+}
+.ci-metric-v {
+  display: block;
+  margin-top: 4px;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--ci-ink);
+}
+
+/* Import Your AI Section ------------------------------------------------------- */
+
+.ci-ai-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: calc(20 * var(--u));
+}
+
+.ci-ai-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 24px;
+  border-radius: 20px;
+  background: var(--ci-surface);
+  border: 1px solid var(--ci-rule);
+}
+.ci-ai-card.is-acid {
+  background: var(--ci-acid);
+  border-color: rgba(23, 23, 23, 0.2);
+}
+.ci-ai-card.is-acid .ci-mono-meta,
+.ci-ai-card.is-acid .ci-ai-note {
+  color: #2A2926;
+}
+.ci-ai-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.ci-ai-card-top > svg { width: 20px; height: 20px; color: var(--ci-cobalt); }
+.ci-ai-card h3 {
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+.ci-ai-note {
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: var(--ci-muted);
+}
+
+/* Obsidian Security & Legal Band ----------------------------------------------- */
+
+.ci-dark-band {
+  margin: 16px 0;
+  padding: calc(72 * var(--u)) calc(48 * var(--u));
+  border-radius: calc(28 * var(--u));
+  background: var(--ci-ink-surface);
+  color: #FFFFFF;
+}
+
+.ci-dark-head { max-width: 820px; }
+.ci-dark-lede {
+  margin-top: 16px;
+  font-size: 19px;
+  line-height: 1.5;
+  color: var(--ci-ink-muted);
+}
+
+.ci-dark-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  margin-top: 40px;
+}
+
+.ci-dark-panel {
+  background: var(--ci-ink-elevated);
+  border: 1px solid var(--ci-ink-border);
+  border-radius: 20px;
+  padding: 28px;
+}
+.ci-dark-panel h3 {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  margin-top: 16px;
+  color: #FFFFFF;
+}
+
+.ci-dark-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--ci-font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: rgba(36, 72, 255, 0.22);
+  color: #DDE6FF;
+}
+.ci-dark-badge svg { width: 15px; height: 15px; }
+.ci-dark-badge--acid {
+  background: var(--ci-acid);
+  color: var(--ci-acid-ink);
+}
+
+.ci-dark-list {
+  list-style: none;
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.ci-dark-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 15px;
+  line-height: 1.5;
+  color: #D8D3C8;
+}
+.ci-dark-list li .ci-dark-num {
+  font-family: var(--ci-font-mono);
+  font-size: 12px;
+  color: var(--ci-acid);
+  padding-top: 3px;
+  flex: none;
+}
+.ci-dark-list li > span:last-child { min-width: 0; overflow-wrap: anywhere; }
+.ci-dark-list code {
+  font-family: var(--ci-font-mono);
+  font-size: 0.88em;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 1px 6px;
+  border-radius: 5px;
+  color: #FFFFFF;
+}
+
+.ci-dark-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 24px;
+  margin-top: 32px;
+}
+.ci-dark-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--ci-ink-muted);
+}
+.ci-dark-note svg { width: 16px; height: 16px; color: var(--ci-acid); }
+
+.ci-button--acid {
+  height: 54px;
+  padding: 0 28px;
+  border-radius: 14px;
+  font-size: 16px;
+  background: var(--ci-acid);
+  color: var(--ci-acid-ink) !important;
+  box-shadow: 0 10px 24px -10px rgba(223, 255, 0, 0.45);
+}
+.ci-button--secondary {
+  height: 52px;
+  padding: 0 24px;
+  border-radius: 14px;
+  font-size: 16px;
+  background: var(--ci-surface);
+  border: 1px solid var(--ci-rule);
+  color: var(--ci-ink) !important;
+  box-shadow: 0 2px 6px rgba(92, 74, 46, 0.08);
+}
+.ci-button--ghost-light {
+  height: 54px;
+  padding: 0 24px;
+  border-radius: 14px;
+  font-size: 16px;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  color: #FFFFFF !important;
+  box-shadow: none;
+}
+.ci-button--full { width: 100%; }
+
+/* Pricing ---------------------------------------------------------------------- */
+
+.ci-billing-toggle {
+  display: inline-flex;
+  padding: 4px;
+  border-radius: 12px;
+  background: var(--ci-surface-warm);
+  border: 1px solid var(--ci-rule);
+  gap: 4px;
+}
+.ci-billing-toggle button {
+  min-height: 40px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ci-muted);
+  cursor: pointer;
+}
+.ci-billing-toggle button[aria-pressed='true'] {
+  background: var(--ci-cobalt);
+  color: #FFFFFF;
+}
+
+.ci-pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.ci-price-card {
+  display: flex;
+  flex-direction: column;
+  padding: 32px;
+  border-radius: 22px;
+  background: var(--ci-surface);
+  border: 1px solid var(--ci-rule);
+}
+.ci-price-card.is-featured {
+  border-color: var(--ci-cobalt);
+  box-shadow: var(--ci-clay-ivory);
+}
+.ci-price-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.ci-price-val {
+  font-size: 36px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+}
+.ci-price-val span { font-size: 15px; font-weight: 500; color: var(--ci-muted); }
+.ci-price-was { font-size: 20px; font-weight: 600; color: var(--ci-muted-soft); margin-right: 8px; }
+.ci-price-sub { margin-top: 10px; font-size: 15px; color: var(--ci-muted); }
+.ci-price-list {
+  list-style: none;
+  margin: 22px 0 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  flex: 1;
+}
+.ci-price-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 15px;
+  line-height: 1.45;
+}
+.ci-price-list svg { width: 18px; height: 18px; color: var(--ci-cobalt); flex: none; margin-top: 2px; }
+
+/* FAQ -------------------------------------------------------------------------- */
+
+.ci-faq-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.9fr) 1.4fr;
+  gap: 40px;
+  align-items: start;
+}
+.ci-faq-list { display: flex; flex-direction: column; gap: 12px; }
+.ci-faq-item {
+  background: var(--ci-surface);
+  border: 1px solid var(--ci-rule);
+  border-radius: 16px;
+  padding: 18px 22px;
+}
+.ci-faq-item summary {
+  font-size: 17px;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.ci-faq-item summary::after {
+  content: '+';
+  font-family: var(--ci-font-mono);
+  font-size: 20px;
+  color: var(--ci-cobalt);
+}
+.ci-faq-item[open] summary::after { content: '−'; }
+.ci-faq-item p {
+  margin-top: 12px;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--ci-muted);
+}
+
+/* Cobalt CTA Band & Multi-Column Footer ---------------------------------------- */
+
+.ci-cta-band {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 28px;
+  padding: calc(56 * var(--u)) calc(48 * var(--u));
+  border-radius: calc(28 * var(--u));
+  background: linear-gradient(160deg, var(--ci-cobalt-light) 0%, var(--ci-cobalt) 55%, var(--ci-cobalt-deep) 100%);
+  color: #FFFFFF;
+  box-shadow: var(--ci-clay-cobalt);
+}
+.ci-cta-copy { max-width: 720px; }
+.ci-cta-actions { display: flex; flex-wrap: wrap; gap: 14px; }
+
+.ci-footer {
+  margin-top: calc(72 * var(--u));
+  padding-top: calc(40 * var(--u));
+  border-top: 1px solid var(--ci-rule);
+}
+.ci-footer-top {
+  display: grid;
+  grid-template-columns: 1.2fr 2fr;
+  gap: 40px;
+  margin-bottom: 32px;
+}
+.ci-brand-inline { display: inline-flex; align-items: center; gap: 10px; font-size: 20px; }
+.ci-brand-mark-sm { width: 32px; height: 26px; }
+.ci-footer-brand p { margin-top: 10px; font-size: 14px; line-height: 1.55; color: var(--ci-muted); max-width: 34ch; }
+.ci-footer-cols {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+}
+.ci-footer-cols h3 {
+  font-family: var(--ci-font-mono);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ci-muted-soft);
+  margin-bottom: 12px;
+}
+.ci-footer-cols ul,
+.ci-footer-legal {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14.5px;
+  color: var(--ci-muted);
+}
+.ci-footer-cols a:hover,
+.ci-footer-legal a:hover { color: var(--ci-cobalt); text-decoration: underline; }
+
 /* Large phones and tablets: stack the hero, keep the full preview -------------- */
 
 @media (max-width: 1099px) {
@@ -497,14 +1070,15 @@
   .ci-brand { padding-top: 0; margin-left: 0; gap: 10px; }
   .ci-brand-mark { width: 44px; height: 35px; }
   .ci-brand-word { font-size: 26px; }
-  .ci-nav-links { gap: 28px; margin-right: 24px; }
-  .ci-nav-links a { font-size: 16px; }
+  .ci-nav-links { gap: 22px; margin-right: 20px; }
+  .ci-nav-links a { font-size: 15px; }
   .ci-button--compact { height: 46px; padding: 0 26px; font-size: 16px; border-radius: 14px; }
 
   .ci-hero { display: flex; flex-direction: column; margin: 0; min-height: 0; gap: 56px; padding: 40px 0 72px; }
   .ci-hero-copy { padding-top: 0; }
   .ci-display { font-size: clamp(56px, 9vw, 88px); }
   .ci-display--section { font-size: clamp(48px, 7.6vw, 76px); }
+  .ci-display--sub { font-size: clamp(34px, 6.2vw, 54px); }
   .ci-lede { font-size: 23px; }
   .ci-body { font-size: 20px; max-width: 34em; }
   .ci-wide-break { display: none; }
@@ -512,6 +1086,21 @@
   .ci-button--primary { height: 58px; min-width: 280px; font-size: 18px; border-radius: 16px; }
 
   .ci-ws { width: 100%; }
+
+  .ci-span-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; padding: 28px 0; }
+  .ci-span-cell { border-right: 0; padding-right: 0; }
+  .ci-workflow-span { grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 12px 0 48px; }
+  .ci-section { padding: 56px 0; }
+  .ci-section-head { flex-direction: column; align-items: flex-start; gap: 18px; margin-bottom: 28px; }
+  .ci-bento-grid,
+  .ci-ai-grid,
+  .ci-dark-grid,
+  .ci-pricing-grid,
+  .ci-faq-layout { grid-template-columns: minmax(0, 1fr); }
+  .ci-metric-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ci-dark-band { padding: 44px 28px; border-radius: 22px; }
+  .ci-cta-band { padding: 40px 28px; border-radius: 22px; }
+  .ci-footer-top { grid-template-columns: minmax(0, 1fr); gap: 28px; }
 
   .ci-feature { display: flex; flex-direction: column; gap: 24px; min-height: 0; padding-bottom: 32px; }
   .ci-feature-copy { padding-top: 64px; }
@@ -547,7 +1136,7 @@
     position: absolute;
     right: 0;
     top: calc(100% + 8px);
-    min-width: 200px;
+    min-width: 210px;
     display: flex;
     flex-direction: column;
     padding: 8px;
@@ -559,15 +1148,23 @@
   .ci-menu-panel a { display: flex; align-items: center; min-height: 48px; padding: 0 14px; border-radius: 10px; font-size: 16px; }
   .ci-menu-panel a:hover { background: var(--ci-cobalt-tint); color: var(--ci-cobalt); }
 
-  .ci-hero { gap: 40px; padding: 28px 0 56px; }
+  .ci-hero { gap: 40px; padding: 28px 0 44px; }
   .ci-eyebrow { font-size: 12px; }
   .ci-display { font-size: clamp(44px, 13vw, 56px); line-height: 1.02; letter-spacing: -0.06em; }
   .ci-display--section { font-size: clamp(40px, 11.5vw, 52px); }
-  .ci-lede { font-size: 20px; margin-top: 18px !important; }
-  .ci-body { font-size: 18px; }
+  .ci-display--sub { font-size: clamp(32px, 9.5vw, 44px); }
+  .ci-lede { font-size: 19px; margin-top: 18px !important; }
+  .ci-body { font-size: 17px; }
   .ci-actions { flex-direction: column; align-items: stretch; gap: 8px; margin-top: 30px; }
   .ci-button--primary { min-width: 0; width: 100%; height: 56px; font-size: 17px; }
   .ci-text-link { justify-content: center; min-height: 48px; font-size: 17px; }
+
+  .ci-span-strip { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+  .ci-card, .ci-price-card, .ci-dark-panel { padding: 22px; }
+  .ci-dark-band { padding: 36px 20px; border-radius: 20px; }
+  .ci-cta-band { padding: 34px 20px; border-radius: 20px; }
+  .ci-cta-actions, .ci-cta-actions .ci-button { width: 100%; }
+  .ci-footer-cols { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
   /* Workspace: drop the sidebar and notes, keep the plan legible at phone size */
   .ci-ws { --f: 1px; }
@@ -579,11 +1176,11 @@
   .ci-ws-top { height: 52px; padding: 0 14px 0 16px; }
   .ci-ws-title { font-size: 17px; }
   .ci-ws-avatar { width: 30px; height: 30px; font-size: 14px; }
-  .ci-ws-tabs { height: 52px; padding: 0 8px; gap: 2px; overflow: hidden; }
-  .ci-ws-tab { height: 36px; padding: 0 12px; gap: 7px; font-size: 14px; }
+  .ci-ws-tabs { height: auto; min-height: 52px; padding: 8px; gap: 6px; flex-wrap: wrap; overflow: visible; }
+  .ci-ws-tab { height: 36px; padding: 0 12px; gap: 6px; font-size: 13.5px; flex: 0 0 auto; }
   .ci-ws-tab.is-active { min-width: 0; }
   .ci-ws-tab-rule { display: none; }
-  .ci-ws-tab svg { width: 17px; height: 17px; }
+  .ci-ws-tab svg { width: 16px; height: 16px; }
   .ci-ws-body { display: block; }
   .ci-ws-doc { padding: 20px 18px 6px; }
   .ci-ws-heading { font-size: 27px; }
