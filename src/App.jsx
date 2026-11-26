@@ -11,6 +11,7 @@ import { PresetProvider } from './context/PresetContext';
 import { useAppPreset } from './context/preset';
 import { useAuth } from './context/auth';
 import { useImportedAi } from './lib/aiClient';
+import { isDesktopApp } from './lib/desktopBridge';
 import { ToastProvider } from './components/ui/Toast';
 import FullPageSpinner from './components/FullPageSpinner';
 import BrandMark from './components/landing/BrandMark';
@@ -132,7 +133,10 @@ function Sidebar({ open, onClose, onOpenCommand }) {
       {open && <button type="button" className="drawer-scrim" aria-label="Close menu" onClick={onClose} />}
       <aside className={`app-sidebar${open ? ' is-open' : ''}`} aria-label="Main navigation" id="app-navigation">
         <div className="flex-between" style={{ gap: 8 }}>
-          <Link to="/" className="app-brand" aria-label="VibeAssist home" onClick={onClose}><BrandMark /> VibeAssist</Link>
+          <Link to="/" className="app-brand" aria-label="VibeAssist home" onClick={onClose}>
+            <BrandMark /> VibeAssist
+            {isDesktopApp() && <span className="badge badge--cobalt" style={{ fontSize: 10, padding: '1px 6px' }}>Rust</span>}
+          </Link>
           <button
             type="button"
             className="btn btn-ghost btn-sm"

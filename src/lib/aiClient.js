@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { desktopFetch, isDesktopApp, saveDesktopVault } from './desktopBridge';
 
 const CONNECTIONS_KEY = 'vibeassist:ai-connections';
 const ROUTING_KEY = 'vibeassist:ai-routing';
@@ -238,6 +239,9 @@ export function saveImportedModels(list) {
     if (sessionItems.length) session.setItem(CONNECTIONS_KEY, JSON.stringify(sessionItems));
     else session.removeItem(CONNECTIONS_KEY);
   }
+  if (isDesktopApp()) {
+    saveDesktopVault(localItems);
+  }
   emitChanged();
 }
 
@@ -247,6 +251,9 @@ export function clearBrowserAiVault() {
     store?.removeItem(CONNECTIONS_KEY);
   }
   getStorage('local')?.removeItem(ROUTING_KEY);
+  if (isDesktopApp()) {
+    saveDesktopVault([]);
+  }
   emitChanged();
 }
 
@@ -433,7 +440,7 @@ export async function discoverProviderModels(connection) {
   try {
     if (connection.provider === 'ollama' && provider.nativeTagsUrl) {
       const origin = baseUrl.replace(/\/v1$/, '');
-      const res = await fetch(`${origin}/api/tags`, { signal: controller.signal });
+      const res = await desktopFetch(`${origin}/api/tags`, { signal: controller.signal });
       if (res.ok) {
         const data = await res.json();
         const names = (data.models ?? []).map((m) => m.name).filter(Boolean);
@@ -448,7 +455,7 @@ export async function discoverProviderModels(connection) {
     } else if (connection.apiKey) {
       headers.Authorization = `Bearer ${connection.apiKey}`;
     }
-    const res = await fetch(`${baseUrl}/models`, { headers, signal: controller.signal });
+    const res = await desktopFetch(`${baseUrl}/models`, { headers, signal: controller.signal });
     if (!res.ok) {
       return { ok: false, models: provider.models, error: `HTTP ${res.status} while listing models.` };
     }
@@ -483,7 +490,7 @@ export async function completeWithUserAi({
   const started = performance.now();
   let res;
   try {
-    res = await fetch(req.url, { ...req.init, signal });
+    res = await desktopFetch(req.url, { ...req.init, signal });
   } catch (err) {
     if (err?.name === 'AbortError') throw err;
     throw new Error(friendlyAiFetchError(conn, err));

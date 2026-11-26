@@ -11,6 +11,7 @@ import { download } from '../lib/download';
 import { clearBrowserAiVault, useImportedAi } from '../lib/aiClient';
 import { openBillingPortal, planSummary } from '../lib/billing';
 import { resetSuperuserDb } from '../lib/superuserSandbox';
+import { getDesktopSystemInfo, isDesktopApp, setDesktopAlwaysOnTop } from '../lib/desktopBridge';
 import { authMessage } from '../lib/authErrors';
 import PageHeader from '../components/ui/PageHeader';
 import Notice from '../components/ui/Notice';
@@ -46,6 +47,49 @@ function AppearanceSettings() {
       <p className="field-help" role="status" style={{ marginTop: 10 }}>
         Showing {preset === 'simple' ? 'Simple' : 'Advanced'}{choice === 'auto' ? ` because this screen is ${small ? 'phone-sized' : 'wider than a phone'}` : ''}.
       </p>
+    </section>
+  );
+}
+
+function DesktopRuntimeSettings() {
+  const toast = useToast();
+  const [info, setInfo] = useState(null);
+  const [pinned, setPinned] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    getDesktopSystemInfo().then((data) => {
+      if (active && data) setInfo(data);
+    });
+    return () => { active = false; };
+  }, []);
+
+  const togglePin = async (next) => {
+    try {
+      const ok = await setDesktopAlwaysOnTop(next);
+      setPinned(ok);
+      toast.show({ message: ok ? 'Desktop window pinned Always on Top.' : 'Always on Top turned off.' });
+    } catch (err) {
+      toast.show({ message: String(err?.message || err || 'Could not update window state.'), tone: 'error' });
+    }
+  };
+
+  return (
+    <section className="card section" aria-labelledby="desktop-runtime-title">
+      <div className="section-header">
+        <div>
+          <h2 id="desktop-runtime-title" className="card-title">Desktop Studio (Rust · Tauri v2)</h2>
+          <p className="card-subtitle">
+            {info
+              ? `Running native ${info.engine} v${info.appVersion} on ${info.os} (${info.arch}). Vault dir: ${info.appDataDir}`
+              : 'Native Rust runtime active with zero-CORS AI proxy and filesystem scanner.'}
+          </p>
+        </div>
+        <label className="check-row">
+          <input type="checkbox" checked={pinned} onChange={(e) => togglePin(e.target.checked)} />
+          <span>Always on top</span>
+        </label>
+      </div>
     </section>
   );
 }
@@ -380,6 +424,8 @@ export default function Settings() {
       </section>
 
       <AppearanceSettings />
+
+      {isDesktopApp() && <DesktopRuntimeSettings />}
 
       <section className="card section" aria-labelledby="ai-vault-title">
         <div className="section-header">

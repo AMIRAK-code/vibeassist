@@ -25,3 +25,7 @@ dist-ssr
 
 # Wrangler local state
 .wrangler
+
+# Rust / Tauri build artifacts
+src-tauri/target
+src-tauri/gen/schemas

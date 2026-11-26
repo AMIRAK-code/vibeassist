@@ -12,6 +12,7 @@ import {
   testAiConnection, upsertImportedModel, useImportedAi, validateProviderKey,
 } from '../lib/aiClient';
 import { engine } from '../lib/engine';
+import { isDesktopApp, probeLocalAiServers } from '../lib/desktopBridge';
 import PageHeader from '../components/ui/PageHeader';
 import Notice from '../components/ui/Notice';
 import ConfirmButton from '../components/ui/ConfirmButton';
@@ -58,6 +59,9 @@ export default function ImportAI() {
   const [formError, setFormError] = useState('');
   const [testResult, setTestResult] = useState(null);
   const [rowStatus, setRowStatus] = useState({}); // id -> { busy, result }
+  const [localProbes, setLocalProbes] = useState(null);
+  const [probingLocal, setProbingLocal] = useState(false);
+  const desktopMode = isDesktopApp();
 
   // Live Playground state
   const [playTargetId, setPlayTargetId] = useState('');
@@ -269,10 +273,72 @@ export default function ImportAI() {
             <span className="stat-label">Key Custody</span>
             <Lock className="stat-icon" aria-hidden="true" />
           </div>
-          <p className="stat-value" style={{ fontSize: 18 }}>Browser-Direct</p>
-          <p className="stat-change">Requests go directly from your browser to your provider or localhost</p>
+          <p className="stat-value" style={{ fontSize: 18 }}>{desktopMode ? 'Rust Native · Zero-CORS' : 'Browser-Direct'}</p>
+          <p className="stat-change">{desktopMode ? 'Backed by native Rust reqwest & OS AppData vault' : 'Requests go directly from your browser to your provider or localhost'}</p>
         </div>
       </div>
+
+      {desktopMode && (
+        <section className="card section" aria-label="Rust Local AI Port Scanner">
+          <div className="section-header">
+            <div>
+              <h2 className="card-title">Native Local AI Port Discovery (Rust)</h2>
+              <p className="card-subtitle">Probe localhost ports (Ollama 11434, LM Studio 1234, vLLM 8000) directly from Rust with zero CORS setup required.</p>
+            </div>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              disabled={probingLocal}
+              onClick={async () => {
+                setProbingLocal(true);
+                try {
+                  const res = await probeLocalAiServers();
+                  setLocalProbes(res);
+                } catch (err) {
+                  toast.show({ message: err?.message || 'Local probe failed.', tone: 'error' });
+                } finally {
+                  setProbingLocal(false);
+                }
+              }}
+            >
+              <RefreshCw aria-hidden="true" /> {probingLocal ? 'Probing ports…' : 'Scan local AI ports'}
+            </button>
+          </div>
+          {localProbes && (
+            <div className="grid-3" style={{ marginTop: 12 }}>
+              {localProbes.map((p) => (
+                <div key={p.provider} className="card" style={{ padding: 12 }}>
+                  <div className="flex-between" style={{ gap: 8 }}>
+                    <strong>{p.label}</strong>
+                    <span className={`badge ${p.reachable ? 'badge--success' : ''}`}>
+                      {p.reachable ? `Online · ${p.latencyMs}ms` : 'Offline'}
+                    </span>
+                  </div>
+                  <p className="field-help" style={{ marginTop: 4 }}><code>{p.baseUrl}</code></p>
+                  {p.reachable && (
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-sm"
+                      style={{ marginTop: 8 }}
+                      onClick={() => {
+                        setCategory('local');
+                        setForm({
+                          ...emptyDraft(p.provider),
+                          baseUrl: p.baseUrl,
+                          defaultModel: p.models?.[0] || AI_PROVIDERS[p.provider]?.defaultModel || 'local-model',
+                        });
+                        if (p.models?.length) setDiscoveredModels(p.models);
+                      }}
+                    >
+                      Use {p.models?.[0] ? `${p.models[0]}` : p.label}
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       <section className="card section" id="import-ai-form" aria-labelledby="import-form-title">
         <div className="section-header">

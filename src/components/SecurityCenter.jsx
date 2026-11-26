@@ -12,6 +12,7 @@ import {
   RLS_HARDENING_CHECKS, scanDependenciesWithOsv, scanSecretsInText,
 } from '../lib/securityScanner';
 import { download } from '../lib/download';
+import { fetchLiveUrlHeaders, isDesktopApp, scanLocalDirectory } from '../lib/desktopBridge';
 import Notice from './ui/Notice';
 import ModelSelectorPill from './ModelSelectorPill';
 
@@ -49,6 +50,11 @@ export default function SecurityCenter() {
   const [secretText, setSecretText] = useState('');
   const [secretFilename, setSecretFilename] = useState('pasted-code.txt');
   const [secretResult, setSecretResult] = useState(null);
+  const [nativeDirPath, setNativeDirPath] = useState('');
+  const [nativeDirBusy, setNativeDirBusy] = useState(false);
+  const [liveHeaderUrl, setLiveHeaderUrl] = useState('https://vibeassist.app');
+  const [liveHeaderBusy, setLiveHeaderBusy] = useState(false);
+  const desktopMode = isDesktopApp();
 
   // 2) Dependency CVE Scanner state
   const [pkgText, setPkgText] = useState('');
@@ -214,6 +220,45 @@ export default function SecurityCenter() {
             </label>
             <span className="field-help">Or paste code, <code>.env</code>, or a <code>git diff</code> below.</span>
           </div>
+
+          {desktopMode && (
+            <div className="inline-form" style={{ marginTop: 12 }}>
+              <input
+                type="text"
+                className="input-field input-sm"
+                style={{ flex: 1, minWidth: 240 }}
+                value={nativeDirPath}
+                onChange={(e) => setNativeDirPath(e.target.value)}
+                placeholder="C:\path\to\project (Rust native recursive scan)"
+                aria-label="Local folder path to scan in Rust"
+                spellCheck="false"
+              />
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                disabled={nativeDirBusy || !nativeDirPath.trim()}
+                onClick={async () => {
+                  setNativeDirBusy(true);
+                  try {
+                    const report = await scanLocalDirectory(nativeDirPath);
+                    setSecretResult({
+                      findings: report.findings,
+                      scannedLines: report.scannedLines,
+                      scannedFiles: report.scannedFiles,
+                      elapsedMs: report.elapsedMs,
+                    });
+                    toast.show({ message: `Rust scanned ${report.scannedFiles} files (${report.scannedLines} lines) in ${report.elapsedMs}ms.` });
+                  } catch (err) {
+                    toast.show({ message: String(err?.message || err || 'Folder scan failed.'), tone: 'error' });
+                  } finally {
+                    setNativeDirBusy(false);
+                  }
+                }}
+              >
+                <ScanSearch aria-hidden="true" /> {nativeDirBusy ? 'Scanning…' : 'Scan folder (Rust)'}
+              </button>
+            </div>
+          )}
 
           <div className="field" style={{ marginTop: 12 }}>
             <label className="visually-hidden" htmlFor="secret-scan-text">Code or env text to scan</label>
@@ -391,6 +436,38 @@ export default function SecurityCenter() {
                 <h3 id="header-audit-title" className="card-title">Audit Live Headers (<code>curl -I</code>)</h3>
                 <button type="button" className="btn btn-ghost btn-sm" onClick={() => setPastedHeaders(SAMPLE_HEADERS)}>Load example</button>
               </div>
+              {desktopMode && (
+                <div className="inline-form" style={{ marginTop: 8 }}>
+                  <input
+                    type="url"
+                    className="input-field input-sm"
+                    style={{ flex: 1 }}
+                    value={liveHeaderUrl}
+                    onChange={(e) => setLiveHeaderUrl(e.target.value)}
+                    placeholder="https://yourapp.com"
+                    aria-label="Live URL to inspect headers in Rust"
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    disabled={liveHeaderBusy || !liveHeaderUrl.trim()}
+                    onClick={async () => {
+                      setLiveHeaderBusy(true);
+                      try {
+                        const res = await fetchLiveUrlHeaders(liveHeaderUrl);
+                        setPastedHeaders(res.rawHeaders);
+                        toast.show({ message: `Fetched HTTP ${res.status} headers via Rust.` });
+                      } catch (err) {
+                        toast.show({ message: String(err?.message || err || 'Could not fetch headers.'), tone: 'error' });
+                      } finally {
+                        setLiveHeaderBusy(false);
+                      }
+                    }}
+                  >
+                    {liveHeaderBusy ? 'Fetching…' : 'Fetch live (Rust)'}
+                  </button>
+                </div>
+              )}
               <textarea
                 className="input-field"
                 rows={4}
